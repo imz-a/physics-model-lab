@@ -91,31 +91,52 @@
     + '.cap-mini{border:1px solid var(--cap-line);border-radius:11px;padding:9px;text-align:center;background:#fff}'
     + '.cap-mini svg{display:block;width:100%;height:auto;min-height:110px}.cap-mini p{font-size:12px;color:var(--cap-ink2);margin-top:5px}'
     + '.cap-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,10px);background:#fff;border:1px solid #dce4ec;border-radius:10px;padding:8px 14px;font-size:12px;color:#3a4250;box-shadow:0 8px 24px rgba(88,108,132,.14);opacity:0;transition:.2s;z-index:99;pointer-events:none}'
-    + '@media(max-width:980px){.cap-grid2,.cap-grid4,.cap-acc-grid{grid-template-columns:1fr}.cap-mini-row{grid-template-columns:1fr 1fr}}';
+    + '.cap-chips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}'
+    + '.cap-chip{border:1px solid #dce4ec;background:#fff;border-radius:99px;padding:4px 11px;font-size:13px;font-weight:700;color:var(--cap-ink2);cursor:pointer;font-family:"Cambria Math",Georgia,serif;font-style:italic}'
+    + '.cap-chip:hover{border-color:#b9d7e8}.cap-chip.on{background:var(--cap-cream);border-color:#e8d179;color:#7a6520;box-shadow:0 0 0 2px rgba(255,243,191,.7)}'
+    + '.cap-explain{margin-top:12px;background:#f8fafc;border:1px dashed #cdd9e5;border-radius:10px;padding:11px 13px;font-size:13px;color:var(--cap-ink2);min-height:48px}'
+    + '.cap-qhead{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;margin-bottom:9px}'
+    + '.cap-qnum{background:var(--cap-pink);color:#8c4f55;border-radius:8px;padding:2px 10px;font-size:12px}'
+    + '.cap-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}'
+    + '.cap-opt{border:1px solid var(--cap-line);background:#fff;border-radius:10px;padding:9px 12px;text-align:left;font-size:13px;cursor:pointer;color:var(--cap-ink2)}'
+    + '.cap-opt:hover{border-color:#b9d7e8}.cap-opt.correct{background:#effaf4;border-color:#a7ddc4;color:#2f6a55;font-weight:700}'
+    + '.cap-opt.wrong{background:#fff0f1;border-color:#ffd6da;color:#a35d65}'
+    + '.cap-fb{font-size:13px;font-weight:700;min-height:20px;margin-top:6px}.cap-fb.ok{color:#3f8067}.cap-fb.no{color:#a35d65}'
+    + '.cap-input{border:1px solid #dce4ec;border-radius:9px;padding:8px 11px;font-size:14px;width:120px;background:#fff}'
+    + '.cap-exam-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:center}'
+    + '@media(max-width:980px){.cap-grid2,.cap-grid4,.cap-acc-grid,.cap-exam-row{grid-template-columns:1fr}.cap-mini-row{grid-template-columns:1fr 1fr}}';
 
   /* -------------------- 视图 HTML -------------------- */
   function viewConcepts(){
     var cards = [
       { c:'pink', tag:'定义式', f:'C = <span class="cap-frac"><span class="n">Q</span><span class="d">U</span></span>',
         top:'两个彼此绝缘、相距很近的导体，能够储存电荷与电场能。',
-        s:'<b>C</b> 电容（F）· <b>Q</b> 电荷量（C）· <b>U</b> 电压（V）<br>1 F = 1 C/V；C 不由 Q、U 决定。' },
+        s:'<b>C</b> 电容（F）· <b>Q</b> 电荷量（C）· <b>U</b> 电压（V）<br>1 F = 1 C/V；C 不由 Q、U 决定。',
+        chips:['C','Q','U'] },
       { c:'peach', tag:'决定式', f:'C = <span class="cap-frac"><span class="n">ε<span class="cap-sub2">r</span>S</span><span class="d">4πkd</span></span>',
         top:'电容由几何结构与介质决定。',
-        s:'<b>ε<sub class="cap-sub2">r</sub></b> 相对介电常数 · <b>S</b> 正对面积 · <b>d</b> 板间距<br><b>k</b> 静电力常量 9.0×10⁹ N·m²/C²<br><span class="hl">核心：C ∝ ε<sub class="cap-sub2">r</sub>S / d</span>' },
+        s:'<b>ε<sub class="cap-sub2">r</sub></b> 相对介电常数 · <b>S</b> 正对面积 · <b>d</b> 板间距<br><b>k</b> 静电力常量 9.0×10⁹ N·m²/C²<br><span class="hl">核心：C ∝ ε<sub class="cap-sub2">r</sub>S / d</span>',
+        chips:['C','εr','S','d','k'] },
       { c:'sky', tag:'场强', f:'E = <span class="cap-frac"><span class="n">U</span><span class="d">d</span></span> = <span class="cap-frac"><span class="n">4πkQ</span><span class="d">ε<span class="cap-sub2">r</span>S</span></span>',
         top:'平行板间为匀强电场，方向由正极板指向负极板。',
-        s:'断电源时 Q 不变：<br><span class="hl">E 与板间距 d 无关</span>，只由面密度与介质决定。' },
+        s:'断电源时 Q 不变：<br><span class="hl">E 与板间距 d 无关</span>，只由面密度与介质决定。',
+        chips:['E','U','d','Q','εr','S'] },
       { c:'mint', tag:'电场能', f:'W = <span class="cap-frac"><span class="n">1</span><span class="d">2</span></span>CU² = <span class="cap-frac"><span class="n">Q²</span><span class="d">2C</span></span> = <span class="cap-frac"><span class="n">1</span><span class="d">2</span></span>QU',
         top:'充电把其他形式的能转化为电场能储存起来。',
-        s:'接电源用 <span class="hl">½CU²</span>，断电源用 <span class="hl">Q²/2C</span> 最方便。' }
+        s:'接电源用 <span class="hl">½CU²</span>，断电源用 <span class="hl">Q²/2C</span> 最方便。',
+        chips:['W','C','U','Q'] }
     ];
     return '<div class="cap-grid4">' + cards.map(function(x){
       return '<details class="cap-card cap-concept ' + x.c + '" open>'
         + '<summary>' + x.tag + '</summary>'
         + '<div class="cap-sym" style="margin-top:10px">' + x.top + '</div>'
         + '<div class="cap-formula ' + (x.c==='sky'?'sky':x.c==='mint'?'mint':x.c==='peach'?'peach':'') + '">' + x.f + '</div>'
+        + '<div class="cap-chips">' + x.chips.map(function(s){
+            return '<button class="cap-chip" type="button" data-sym="'+s+'" aria-label="高亮物理量 '+s+'">'+s+'</button>';
+          }).join('') + '</div>'
         + '<div class="cap-sym">' + x.s + '</div></details>';
     }).join('') + '</div>'
+      + '<div class="cap-explain" id="capSymExplain" aria-live="polite">点按公式下方的物理量标记，可跨卡片高亮同一物理量并查看它的含义与单位。</div>'
       + '<details class="cap-drawer"><summary>符号与单位一览（点开查看）</summary><div class="body">'
       + '<table class="cap-table"><thead><tr><th>符号</th><th>意义</th><th>单位</th><th>符号</th><th>意义</th><th>单位</th></tr></thead><tbody>'
       + '<tr><td>C</td><td>电容</td><td>F</td><td>ε<sub class="cap-sub2">r</sub></td><td>相对介电常数</td><td>无量纲</td></tr>'
@@ -274,6 +295,58 @@
       + '</div></div></div></div>';
   }
 
+  function viewExam(){
+    return ''
+      + '<div class="cap-card pink">'
+      + '<div class="cap-qhead"><span class="cap-qnum">1</span>平行板接电源 · 增大板间距（选择题）</div>'
+      + '<div class="cap-sym">保持与电源连接，把板间距 d 从 1.00 调到 <b id="capQ1Val">1.50</b>，电容 C、电荷 Q、场强 E、电场能 W 如何变化？</div>'
+      + '<input id="capQ1Range" class="cap-range" type="range" min="1.1" max="2" step="0.1" value="1.5" style="max-width:420px;margin:10px 0" aria-label="板间距变化倍数">'
+      + '<div class="cap-opts" id="capQ1Opts">'
+      + '<button class="cap-opt" type="button" data-i="0">A. C↑ Q↑ E↑ W↑</button>'
+      + '<button class="cap-opt" type="button" data-i="1">B. C↓ Q↓ E↓ W↓</button>'
+      + '<button class="cap-opt" type="button" data-i="2">C. C↓ Q↓ E 不变 W↓</button>'
+      + '<button class="cap-opt" type="button" data-i="3">D. C↑ Q↑ E 不变 W↑</button></div>'
+      + '<div class="cap-fb" id="capQ1Fb"></div>'
+      + '<details class="cap-drawer"><summary>展开解析</summary><div class="body"><div class="cap-sym">接电源时 <b>U 不变</b>。由 C∝εrS/d 得 d↑→C↓；Q=CU→Q↓；E=U/d→E↓；W=½CU²→W↓。故选 B。</div></div></details>'
+      + '</div>'
+
+      + '<div class="cap-card peach">'
+      + '<div class="cap-qhead"><span class="cap-qnum">2</span>串并联与电容传感器（计算题）</div>'
+      + '<div class="cap-exam-row">'
+      + '<div><div class="cap-sym">两个电容 C₁、C₂ <b>并联</b>接在同一电源上，求等效电容 C。可拖动参数改变题目数据（归一化，略去 4πk）。<br>'
+      + 'C₁=<b id="capQ2C1V">2.0</b>　C₂=<b id="capQ2C2V">3.0</b></div>'
+      + '<div class="cap-chips"><button class="cap-chip" type="button" data-sym="C">C</button><button class="cap-chip" type="button" data-sym="U">U</button><button class="cap-chip" type="button" data-sym="Q">Q</button></div>'
+      + '<div class="cap-ctrls" style="grid-template-columns:repeat(2,minmax(0,1fr))">'
+      + '<div class="cap-ctrl"><label>C₁ <b>2.0</b></label><input id="capQ2C1" class="cap-range" type="range" min="1" max="5" step="0.5" value="2"></div>'
+      + '<div class="cap-ctrl"><label>C₂ <b>3.0</b></label><input id="capQ2C2" class="cap-range" type="range" min="1" max="5" step="0.5" value="3"></div></div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      + '<input id="capQ2Ans" class="cap-input" type="number" step="0.1" placeholder="你的答案" aria-label="等效电容答案">'
+      + '<button id="capQ2Check" class="cap-btn primary" type="button">判定</button></div>'
+      + '<div class="cap-fb" id="capQ2Fb"></div></div>'
+      + '<div class="cap-mini-row">'
+      + '<div class="cap-mini"><svg viewBox="0 0 150 110" role="img" aria-label="串联电路"><path d="M15,25 H135 M15,85 H135 M15,25 V85 M135,25 V85" fill="none" stroke="#9aa8b6" stroke-width="2.5"/><path d="M15,55 H60 M90,55 H135" fill="none" stroke="#9aa8b6" stroke-width="2.5"/><line x1="60" y1="42" x2="60" y2="68" stroke="#F4978E" stroke-width="3.5"/><line x1="70" y1="42" x2="70" y2="68" stroke="#F4978E" stroke-width="3.5"/><line x1="98" y1="42" x2="98" y2="68" stroke="#7FB3D5" stroke-width="3.5"/><line x1="108" y1="42" x2="108" y2="68" stroke="#7FB3D5" stroke-width="3.5"/><path d="M70,55 H98" stroke="#9aa8b6" stroke-width="2.5"/></svg><p>串联：等电荷，1/C=Σ1/Cᵢ</p></div>'
+      + '<div class="cap-mini"><svg viewBox="0 0 130 90" role="img" aria-label="液位传感器"><rect x="26" y="8" width="7" height="72" fill="#FFB3BA"/><rect x="97" y="8" width="7" height="72" fill="#BFE3F5"/><rect x="34" y="46" width="62" height="34" fill="#BFE3F5" opacity=".8"/><path d="M34,46 H96" stroke="#7FB3D5" stroke-width="2"/></svg><p>液位传感器：液面↑→等效 εr↑→C↑</p></div>'
+      + '</div></div>'
+      + '<details class="cap-drawer"><summary>展开解析</summary><div class="body"><div class="cap-sym">并联各支路<b>电压相等</b>，电荷量相加：Q=Q₁+Q₂=(C₁+C₂)U，故 <span class="hl">C=C₁+C₂</span>。串联则电荷相等、电压相加，等效电容比任一个都小。</div></div></details>'
+      + '</div>'
+
+      + '<div class="cap-card sky">'
+      + '<div class="cap-qhead"><span class="cap-qnum">3</span>带电粒子偏转 · 初速度的影响（选择题）</div>'
+      + '<div class="cap-exam-row">'
+      + '<div><div class="cap-sym">带电粒子以水平初速度 v₀ 垂直进入匀强偏转电场。保持 q、m、E、极板长度不变，若 <b>v₀ 增大</b>，离开电场时的竖直偏转量 y 如何变化？当前 v₀=<b id="capQ3VVal">1.0</b>（示意）。</div>'
+      + '<input id="capQ3V" class="cap-range" type="range" min="0.6" max="2" step="0.1" value="1" style="max-width:420px;margin:10px 0" aria-label="初速度">'
+      + '<div class="cap-opts" style="grid-template-columns:1fr 1fr">'
+      + '<button class="cap-opt" type="button" data-i="0">A. y 增大</button>'
+      + '<button class="cap-opt" type="button" data-i="1">B. y 减小</button>'
+      + '<button class="cap-opt" type="button" data-i="2">C. y 不变</button>'
+      + '<button class="cap-opt" type="button" data-i="3">D. 先增大后减小</button></div>'
+      + '<div class="cap-fb" id="capQ3Fb"></div></div>'
+      + '<canvas id="capQuizParticle" class="cap-canvas" width="1040" height="480" role="img" aria-label="带电粒子偏转情境动画"></canvas>'
+      + '</div>'
+      + '<details class="cap-drawer"><summary>展开解析</summary><div class="body"><div class="cap-sym">水平方向 x=v₀t，竖直方向 y=½at²（a=qE/m）。联立得 <span class="hl">y=(qE/2mv₀²)x²</span>，故 v₀ 增大时偏转量 y 减小。飞出电场后粒子沿切线做匀速直线运动。</div></div></details>'
+      + '</div>';
+  }
+
   /* -------------------- 模块主体 -------------------- */
   function render(container, extIndex){
     if(!container || typeof container.innerHTML === 'undefined') return function(){};
@@ -327,8 +400,31 @@
 
     var body = extIndex === 0 ? viewConcepts()
       : extIndex === 1 ? viewSimulator()
-        : extIndex === 2 ? viewCharge() : viewExtend();
+        : extIndex === 2 ? viewCharge() : viewExam();
     container.innerHTML = '<style>' + STYLE + '</style><div class="cap-root">' + body + '</div>';
+
+    /* ---------------- 视图 0：基本模型（公式物理量联动） ---------------- */
+    if(extIndex === 0){
+      var SYM = {
+        C:'电容，反映电容器容纳电荷的本领，单位 F（法拉）。由 εr、S、d 决定，与 Q、U 无关。',
+        Q:'电荷量，指一块极板所带电荷的绝对值，单位 C（库仑）。',
+        U:'两极板间电势差（电压），单位 V（伏特）。接电源时由电源决定。',
+        E:'板间匀强电场的场强，单位 V/m。接电源 E=U/d；断电源 E=4πkQ/(εrS) 与 d 无关。',
+        W:'电场能，单位 J（焦耳）。接电源用 W=½CU²，断电源用 W=Q²/2C。',
+        S:'两极板的正对面积，单位 m²。S 越大电容越大。',
+        d:'两极板间距，单位 m。d 越大电容越小。',
+        εr:'相对介电常数，无量纲（空气≈1）。插入介质后 εr 增大，电容增大。',
+        k:'静电力常量 k=9.0×10⁹ N·m²/C²，出现在决定式分母 4πkd 中。'
+      };
+      var chips = container.querySelectorAll('.cap-chip');
+      for(var ci=0; ci<chips.length; ci++){
+        on(chips[ci], 'click', function(){
+          var s = this.getAttribute('data-sym');
+          for(var j=0;j<chips.length;j++) chips[j].classList.toggle('on', chips[j].getAttribute('data-sym') === s);
+          q('capSymExplain').innerHTML = '<b style="font-family:Georgia,serif;font-style:italic">' + s + '</b>：' + (SYM[s] || '电容器相关物理量。');
+        });
+      }
+    }
 
     /* ---------------- 物理内核 ---------------- */
     var METAL_T = 0.4;
@@ -585,8 +681,8 @@
       });
     }
 
-    /* ---------------- 视图 3：拓展模型 ---------------- */
-    if(extIndex === 3){
+    /* ---------------- 旧拓展动画保留备查（当前高考题型视图已不使用） ---------------- */
+    if(extIndex === 99){
       var accs = container.querySelectorAll('.cap-acc');
       for(var ai=0; ai<accs.length; ai++){
         on(accs[ai].querySelector('.cap-acc-head'), 'click', function(){
@@ -681,6 +777,110 @@
         q('capLcGlow').setAttribute('opacity',(0.12+0.42*Math.abs(qv)).toFixed(2));
         q('capArrR').style.display = iv>=0 ? '' : 'none';
         q('capArrL').style.display = iv<0 ? '' : 'none';
+      });
+    }
+
+    /* ---------------- 视图 3：高考题型（即时判分） ---------------- */
+    if(extIndex === 3){
+      function fb(id, ok, msg){
+        var el = q(id);
+        el.className = 'cap-fb ' + (ok ? 'ok' : 'no');
+        el.textContent = (ok ? '✔ 正确：' : '✘ 不正确：') + msg;
+      }
+      function resetOpts(list){ for(var i=0;i<list.length;i++) list[i].className = 'cap-opt'; }
+      /* 第 1 题：接电源 d↑ */
+      var q1opts = container.querySelectorAll('#capQ1Opts .cap-opt');
+      for(var a=0;a<q1opts.length;a++){
+        on(q1opts[a], 'click', function(){
+          var i = +this.getAttribute('data-i');
+          resetOpts(q1opts);
+          if(i === 1){
+            this.classList.add('correct');
+            fb('capQ1Fb', true, 'U 不变，d↑→C↓、Q=CU↓、E=U/d↓、W=½CU²↓。');
+          }else{
+            this.classList.add('wrong'); q1opts[1].classList.add('correct');
+            fb('capQ1Fb', false, '应选 B；接电源时 U 被电源锁定。');
+          }
+        });
+      }
+      on(q('capQ1Range'), 'input', function(){
+        q('capQ1Val').textContent = (+this.value).toFixed(2);
+        resetOpts(q1opts); q('capQ1Fb').textContent = '';
+      });
+      /* 第 2 题：并联等效电容 */
+      var c1 = q('capQ2C1'), c2 = q('capQ2C2');
+      function expectedC(){ return (+c1.value) + (+c2.value); }
+      [c1,c2].forEach(function(el, idx){
+        var out = idx === 0 ? q('capQ2C1V') : q('capQ2C2V');
+        on(el, 'input', function(){
+          out.textContent = (+this.value).toFixed(1);
+          q('capQ2Fb').textContent = '';
+        });
+      });
+      on(q('capQ2Check'), 'click', function(){
+        var ans = parseFloat(q('capQ2Ans').value), exp = expectedC();
+        if(isNaN(ans)){ fb('capQ2Fb', false, '请先输入一个数字答案。'); return; }
+        if(Math.abs(ans-exp)/exp < 0.05) fb('capQ2Fb', true, 'C=C₁+C₂=' + exp.toFixed(1) + '，并联电压相等、电荷相加。');
+        else fb('capQ2Fb', false, '并联应相加：C=C₁+C₂=' + exp.toFixed(1) + '。');
+      });
+      /* 第 3 题：粒子偏转 + 情境动画 */
+      var q3opts = container.querySelectorAll('#capQuizParticle, .cap-card.sky .cap-opt');
+      var q3list = container.querySelectorAll('.cap-card.sky .cap-opt');
+      for(var b=0;b<q3list.length;b++){
+        on(q3list[b], 'click', function(){
+          var i = +this.getAttribute('data-i');
+          resetOpts(q3list);
+          if(i === 1){ this.classList.add('correct'); fb('capQ3Fb', true, 'y=(qE/2mv₀²)x²，v₀ 越大偏转越小。'); }
+          else { this.classList.add('wrong'); q3list[1].classList.add('correct'); fb('capQ3Fb', false, '应选 B；水平速度越大，在场中时间越短。'); }
+        });
+      }
+      var vRange = q('capQ3V');
+      on(vRange, 'input', function(){
+        q('capQ3VVal').textContent = (+this.value).toFixed(1);
+        resetOpts(q3list); q('capQ3Fb').textContent = '';
+      });
+      var quizChips = container.querySelectorAll('.cap-chip');
+      for(var h=0;h<quizChips.length;h++){
+        on(quizChips[h], 'click', function(){
+          for(var z=0;z<quizChips.length;z++) quizChips[z].classList.toggle('on', quizChips[z] === this);
+        });
+      }
+
+      var pc = q('capQuizParticle'), pctx = pc.getContext('2d');
+      pctx.setTransform(pc.width/520, 0, 0, pc.height/240, 0, 0);
+      var x0=90, y0=120, Lx=390, xEnd=470, phP=0, lastP=0;
+      function kNow(v){ return 50/(Math.pow(300,2)*v*v); }
+      function yAt(x, v){
+        if(x<=Lx) return y0 + kNow(v)*(x-x0)*(x-x0);
+        return y0 + 50/(v*v) + 2*kNow(v)*(Lx-x0)*(x-Lx);
+      }
+      loop(function(now){
+        if(!lastP) lastP=now;
+        var dt=Math.min(50,now-lastP); lastP=now;
+        if(!paused) phP+=dt;
+        if(!pc.offsetParent) return;
+        var v = +vRange.value;
+        var u=(phP%3200)/2400, x=x0+Math.min(1,u)*(xEnd-x0), y=yAt(x,v);
+        pctx.clearRect(0,0,520,240);
+        pctx.fillStyle='#FFB3BA'; pctx.fillRect(90,52,300,9);
+        pctx.fillStyle='#BFE3F5'; pctx.fillRect(90,179,300,9);
+        pctx.strokeStyle='rgba(127,179,213,.38)'; pctx.fillStyle='rgba(127,179,213,.6)'; pctx.lineWidth=1;
+        for(var gx=120; gx<=380; gx+=52){
+          pctx.beginPath(); pctx.moveTo(gx,64); pctx.lineTo(gx,174); pctx.stroke();
+          pctx.beginPath(); pctx.moveTo(gx-3,170); pctx.lineTo(gx+3,170); pctx.lineTo(gx,177); pctx.closePath(); pctx.fill();
+        }
+        pctx.setLineDash([4,5]); pctx.strokeStyle='rgba(176,155,214,.55)'; pctx.lineWidth=1.4;
+        pctx.beginPath(); pctx.moveTo(x0,y0);
+        for(var px=x0;px<=xEnd;px+=5) pctx.lineTo(px,yAt(px,v));
+        pctx.stroke(); pctx.setLineDash([]);
+        pctx.strokeStyle='#B39DDB'; pctx.lineWidth=2.4; pctx.beginPath(); pctx.moveTo(x0,y0);
+        for(var qx=x0;qx<=x;qx+=4) pctx.lineTo(qx,yAt(qx,v));
+        pctx.lineTo(x,y); pctx.stroke();
+        pctx.strokeStyle='#7fbf9f'; pctx.fillStyle='#7fbf9f'; pctx.lineWidth=2;
+        pctx.beginPath(); pctx.moveTo(x0-34,y0); pctx.lineTo(x0-4,y0); pctx.stroke();
+        pctx.beginPath(); pctx.moveTo(x0-2,y0); pctx.lineTo(x0-11,y0-4); pctx.lineTo(x0-11,y0+4); pctx.closePath(); pctx.fill();
+        pctx.fillStyle='#F4978E'; pctx.beginPath(); pctx.arc(x,y,5.5,0,Math.PI*2); pctx.fill();
+        pctx.fillStyle='#5a6472'; pctx.font='12px sans-serif'; pctx.fillText('F=qE',396,92);
       });
     }
 
