@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电容器 · 模型实验室</title>
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">C</div>
+      <div>
+        <div class="brand-title">电容器 · 模型实验室</div>
+        <div class="brand-sub">高中物理模型交互实验室 · 样板页 01</div>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="章节切换">
+      <button class="tab active" type="button" role="tab" aria-selected="true" data-tab="concepts"><span class="tab-num">①</span>核心概念</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" data-tab="simulator"><span class="tab-num">②</span>动态模拟</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" data-tab="charge"><span class="tab-num">③</span>充放电实验</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" data-tab="extend"><span class="tab-num">④</span>拓展模型</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ==================== ① 核心概念 ==================== -->
+    <section class="panel active" id="panel-concepts" role="tabpanel" aria-label="核心概念">
+      <div class="wrap">
+        <div class="grid-concepts">
+          <article class="card concept-card tint-pink">
+            <h3><span class="dot"></span>电容器与定义式</h3>
+            <div class="sym">两个彼此绝缘、相距很近的导体，能够储存电荷与电场能。</div>
+            <div class="formula">C = <span class="frac"><span class="num">Q</span><span class="den">U</span></span></div>
+            <div class="sym"><b>C</b> 电容（F）· <b>Q</b> 电荷量（C）· <b>U</b> 电压（V）<br>1 F = 1 C/V；C 不由 Q、U 决定。</div>
+          </article>
+
+          <article class="card concept-card tint-peach">
+            <h3><span class="dot"></span>平行板决定式</h3>
+            <div class="sym">电容由几何结构与介质决定。</div>
+            <div class="formula peach">C = <span class="frac"><span class="num">ε<span class="math-sub">r</span>S</span><span class="den">4πkd</span></span></div>
+            <div class="sym"><b>ε<sub class="math-sub">r</sub></b> 相对介电常数 · <b>S</b> 正对面积<br><b>d</b> 板间距 · <b>k</b> 静电力常量<br><span class="hl">核心：C ∝ ε<sub class="math-sub">r</sub>S / d</span></div>
+          </article>
+
+          <article class="card concept-card tint-sky">
+            <h3><span class="dot"></span>板间场强</h3>
+            <div class="sym">平行板间为匀强电场，方向由 + 指向 −。</div>
+            <div class="formula sky">E = <span class="frac"><span class="num">U</span><span class="den">d</span></span> = <span class="frac"><span class="num">4πkQ</span><span class="den">ε<span class="math-sub">r</span>S</span></span></div>
+            <div class="sym">断电源时 Q 不变：<br><span class="hl">E 与板间距 d 无关</span>，只由面密度与介质决定。</div>
+          </article>
+
+          <article class="card concept-card tint-mint">
+            <h3><span class="dot"></span>电场能量</h3>
+            <div class="sym">充电把其他能转化为电场能储存在板间。</div>
+            <div class="formula mint">W = <span class="frac"><span class="num">1</span><span class="den">2</span></span>CU² = <span class="frac"><span class="num">Q²</span><span class="den">2C</span></span> = <span class="frac"><span class="num">1</span><span class="den">2</span></span>QU</div>
+            <div class="sym">接电源用 <span class="hl">½CU²</span>，断电源用 <span class="hl">Q²/2C</span> 最方便。</div>
+          </article>
+        </div>
+
+        <details class="drawer" style="max-width:1240px;margin:12px auto 0">
+          <summary>符号与单位一览（点开查看）</summary>
+          <div class="drawer-body">
+            <div class="table-wrap">
+              <table class="rules">
+                <thead><tr><th>符号</th><th>物理意义</th><th>单位</th><th>符号</th><th>物理意义</th><th>单位</th></tr></thead>
+                <tbody>
+                  <tr><td>C</td><td>电容</td><td>F（法拉）</td><td>ε<sub class="math-sub">r</sub></td><td>相对介电常数</td><td>无量纲，空气≈1</td></tr>
+                  <tr><td>Q</td><td>电荷量</td><td>C（库仑）</td><td>S</td><td>正对面积</td><td>m²</td></tr>
+                  <tr><td>U</td><td>板间电压</td><td>V（伏特）</td><td>d</td><td>板间距</td><td>m</td></tr>
+                  <tr><td>E</td><td>电场强度</td><td>V/m 或 N/C</td><td>k</td><td>静电力常量</td><td>9.0×10⁹ N·m²/C²</td></tr>
+                  <tr><td>W</td><td>电场能</td><td>J（焦耳）</td><td>σ</td><td>面电荷密度</td><td>C/m²</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="note">三个公式各司其职：定义式 C=Q/U 提供量度方法；决定式 C=ε<sub class="math-sub">r</sub>S/(4πkd) 说明 C 由什么决定；场强式在两种情景下选用不同等价形式。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ==================== ② 动态模拟 ==================== -->
+    <section class="panel" id="panel-simulator" role="tabpanel" aria-label="动态模拟">
+      <div class="wrap">
+        <div class="grid-sim">
+          <article class="card tint-sky">
+            <div class="card-head">
+              <div class="sec-title">平行板电容器 · 动态分析 <span class="sec-sub">归一化示意</span></div>
+              <span class="tag sky">电场线数量实时联动</span>
+            </div>
+
+            <div class="diagram">
+              <svg id="capSvg" viewBox="0 0 560 330" role="img" aria-label="平行板电容器示意图：极板、电场线、电荷、介质与电源状态">
+                <defs>
+                  <linearGradient id="platePos" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB3BA"/><stop offset="1" stop-color="#F4978E"/></linearGradient>
+                  <linearGradient id="plateNeg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFE3F5"/><stop offset="1" stop-color="#7FB3D5"/></linearGradient>
+                  <linearGradient id="dielG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D0C4E8" stop-opacity=".22"/><stop offset=".5" stop-color="#D0C4E8" stop-opacity=".42"/><stop offset="1" stop-color="#D0C4E8" stop-opacity=".22"/></linearGradient>
+                  <marker id="arrF" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#7FB3D5"/></marker>
+                  <marker id="arrD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#F4978E"/></marker>
+                </defs>
+
+                <g id="wires" fill="none" stroke="#9aa8b6" stroke-width="2.4" stroke-linejoin="round"></g>
+                <g id="srcBattery">
+                  <line x1="68" y1="155" x2="112" y2="155" stroke="#F4978E" stroke-width="3"/>
+                  <line x1="78" y1="170" x2="102" y2="170" stroke="#7FB3D5" stroke-width="3"/>
+                  <text x="119" y="159" fill="#F4978E" font-size="14">+</text>
+                  <text x="119" y="175" fill="#7FB3D5" font-size="14">−</text>
+                  <text x="20" y="143" fill="#8b95a3" font-size="11">电源 · U 恒定</text>
+                </g>
+                <g id="srcSwitch" style="display:none">
+                  <circle cx="90" cy="155" r="3.5" fill="#F4978E"/>
+                  <circle cx="90" cy="170" r="3.5" fill="#F4978E"/>
+                  <line x1="91" y1="154" x2="108" y2="143" stroke="#F4978E" stroke-width="3"/>
+                  <text x="20" y="143" fill="#8b95a3" font-size="11">开关断开 · Q 守恒</text>
+                </g>
+
+                <rect id="dielectric" x="0" y="0" width="0" height="0" fill="url(#dielG)" stroke="#c9bce4" stroke-dasharray="5 4" rx="2" style="display:none"/>
+                <g id="fieldG"></g>
+                <rect id="metal" x="0" y="0" width="0" height="0" fill="#c9d3dd" stroke="#9dabba" rx="2" style="display:none"/>
+                <g id="polarG"></g>
+                <text id="erText" x="0" y="0" fill="#7665a0" font-size="11" style="display:none">介质</text>
+
+                <rect id="plateTop" x="0" y="0" width="0" height="12" fill="url(#platePos)" rx="3"/>
+                <rect id="plateBot" x="0" y="0" width="0" height="12" fill="url(#plateNeg)" rx="3"/>
+                <g id="chargeG"></g>
+
+                <line id="dimLine" x1="0" y1="0" x2="0" y2="0" stroke="#F4978E" stroke-width="1.5" marker-start="url(#arrD)" marker-end="url(#arrD)"/>
+                <text id="dimText" x="0" y="0" fill="#a35d65" font-size="14" font-style="italic">d</text>
+                <text id="sText" x="0" y="0" fill="#8b95a3" font-size="11" text-anchor="middle">正对面积 S</text>
+                <text id="sceneText" x="20" y="320" fill="#8b95a3" font-size="10.5"></text>
+              </svg>
+            </div>
+            <div class="svg-note" id="fieldInfo">σ = Q/S = 1.00　｜　电场线 8 根（定性示意，非真实根数）</div>
+
+            <div class="controls">
+              <div class="ctrl"><label for="dRange">极板间距 d <b id="dVal">1.00</b></label><input id="dRange" type="range" min="0.5" max="2" step="0.01" value="1" aria-label="极板间距 d"></div>
+              <div class="ctrl"><label for="sRange">正对面积 S <b id="sVal">1.00</b></label><input id="sRange" type="range" min="0.5" max="2" step="0.01" value="1" aria-label="正对面积 S"></div>
+              <div class="ctrl"><label for="erRange">相对介电常数 εr <b id="erVal">1.0</b></label><input id="erRange" type="range" min="1" max="6" step="0.1" value="1" aria-label="相对介电常数"></div>
+            </div>
+
+            <div class="metal-row">
+              <span><strong>插入金属板</strong>（等效减小 d） <span id="metalHint" class="tag">未插入</span></span>
+              <button id="metalBtn" class="switch" type="button" role="switch" aria-checked="false" aria-label="插入或移除金属板"></button>
+            </div>
+          </article>
+
+          <div class="side-col">
+            <article class="card tint-pink">
+              <div class="card-head">
+                <div class="sec-title">电路情景与实时指标</div>
+                <div class="btn-group">
+                  <button id="btnBase" class="btn" type="button">设为基准</button>
+                  <button id="btnReset" class="btn" type="button">恢复默认</button>
+                </div>
+              </div>
+              <div class="segment" role="group" aria-label="电路情景切换" style="margin-bottom:4px">
+                <button id="btnU" type="button" class="active" data-sc="U">🔌 接电源 · U 不变</button>
+                <button id="btnQ" type="button" data-sc="Q">⛔ 断电源 · Q 不变</button>
+              </div>
+              <div class="metrics" aria-live="polite">
+                <div class="metric"><div class="k">电容 C</div><div class="v" id="vC">1</div><div class="t flat" id="tC">— 不变</div></div>
+                <div class="metric"><div class="k">电荷 Q</div><div class="v" id="vQ">1</div><div class="t flat" id="tQ">— 不变</div></div>
+                <div class="metric"><div class="k">电压 U</div><div class="v" id="vU">1</div><div class="t flat" id="tU">— 不变</div></div>
+                <div class="metric"><div class="k">场强 E</div><div class="v" id="vE">1</div><div class="t flat" id="tE">— 不变</div></div>
+                <div class="metric"><div class="k">电场能 W</div><div class="v" id="vW">0.5</div><div class="t flat" id="tW">— 不变</div></div>
+              </div>
+              <div class="readout-note">数值为归一化示意（U₀=1、Q₀=C₀），只看趋势。<b style="color:var(--up)">↑</b> 增大 · <b style="color:var(--down)">↓</b> 减小 · 不变。电场线线数 ∝ σ（自由电荷面密度），线深浅 ∝ E。</div>
+            </article>
+
+            <details class="drawer">
+              <summary>动态规律速查表（两张表，点开查看）</summary>
+              <div class="drawer-body">
+                <div id="tblU" class="tbl-block active">
+                  <div class="tbl-title"><span class="pill rose">A</span>始终接电源（U 不变）</div>
+                  <table class="rules">
+                    <thead><tr><th>操作</th><th>C</th><th>Q</th><th>U</th><th>E</th><th>W</th></tr></thead>
+                    <tbody>
+                      <tr><td>d ↑</td><td class="cell-down">↓</td><td class="cell-down">↓</td><td class="cell-same">—</td><td class="cell-down">↓</td><td class="cell-down">↓</td></tr>
+                      <tr><td>S ↑</td><td class="cell-up">↑</td><td class="cell-up">↑</td><td class="cell-same">—</td><td class="cell-same">—</td><td class="cell-up">↑</td></tr>
+                      <tr><td>εr ↑</td><td class="cell-up">↑</td><td class="cell-up">↑</td><td class="cell-same">—</td><td class="cell-same">—</td><td class="cell-up">↑</td></tr>
+                      <tr><td>插金属板</td><td class="cell-up">↑</td><td class="cell-up">↑</td><td class="cell-same">—</td><td class="cell-up">↑</td><td class="cell-up">↑</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div id="tblQ" class="tbl-block">
+                  <div class="tbl-title"><span class="pill">B</span>充电后断电源（Q 不变）</div>
+                  <table class="rules">
+                    <thead><tr><th>操作</th><th>C</th><th>Q</th><th>U</th><th>E</th><th>W</th></tr></thead>
+                    <tbody>
+                      <tr><td>d ↑</td><td class="cell-down">↓</td><td class="cell-same">—</td><td class="cell-up">↑</td><td class="cell-same">—</td><td class="cell-up">↑</td></tr>
+                      <tr><td>S ↑</td><td class="cell-up">↑</td><td class="cell-same">—</td><td class="cell-down">↓</td><td class="cell-down">↓</td><td class="cell-down">↓</td></tr>
+                      <tr><td>εr ↑</td><td class="cell-up">↑</td><td class="cell-same">—</td><td class="cell-down">↓</td><td class="cell-down">↓</td><td class="cell-down">↓</td></tr>
+                      <tr><td>插金属板</td><td class="cell-up">↑</td><td class="cell-same">—</td><td class="cell-down">↓</td><td class="cell-same">—</td><td class="cell-down">↓</td></tr>
+                    </tbody>
+                  </table>
+                  <p class="note">断电源时 E=4πkQ/(εrS) 与 d 无关；S↓ 时各量与 S↑ 行相反（C↓、U↑、E↑、W↑）。</p>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ③ 充放电实验 ==================== -->
+    <section class="panel" id="panel-charge" role="tabpanel" aria-label="充放电实验">
+      <div class="wrap">
+        <div class="grid-charge">
+          <article class="card tint-mint">
+            <div class="card-head">
+              <div class="sec-title">RC 充放电演示 <span class="sec-sub">开关切换电流方向</span></div>
+              <span class="tag mint">电流粒子动画</span>
+            </div>
+            <div class="btn-group" style="margin-bottom:8px">
+              <button id="btnCharge" class="btn primary" type="button" aria-pressed="true">▶ 充电</button>
+              <button id="btnDischarge" class="btn" type="button" aria-pressed="false">◀ 放电</button>
+              <button id="btnPlayRc" class="btn" type="button">⏸ 暂停</button>
+              <button id="btnResetRc" class="btn warn" type="button">↺ 重置</button>
+            </div>
+            <div class="diagram">
+              <svg id="rcSvg" viewBox="0 0 520 220" role="img" aria-label="电源—开关—电阻—电容的充放电电路，电流方向随充放电切换">
+                <!-- 隐藏路径：供运动粒子取点 -->
+                <path id="pathChargeTop" d="M80,72 L80,40 L140,40 L200,40 L260,40 L320,40 L430,40 L430,80" fill="none" stroke="none"/>
+                <path id="pathChargeBottom" d="M430,120 L430,180 L80,180 L80,94" fill="none" stroke="none"/>
+                <path id="pathDischarge" d="M430,80 L430,40 L320,40 L260,40 L200,40 L200,100 L200,180 L430,180 L430,120" fill="none" stroke="none"/>
+
+                <!-- 电源（左） -->
+                <line x1="80" y1="40" x2="80" y2="70" stroke="#9aa8b6" stroke-width="2.5"/>
+                <line x1="62" y1="70" x2="98" y2="70" stroke="#F4978E" stroke-width="3.5"/>
+                <line x1="70" y1="94" x2="90" y2="94" stroke="#7FB3D5" stroke-width="3.5"/>
+                <line x1="80" y1="94" x2="80" y2="180" stroke="#9aa8b6" stroke-width="2.5"/>
+                <text x="106" y="74" fill="#a35d65" font-size="12">+</text>
+                <text x="106" y="98" fill="#4e7f9e" font-size="12">−</text>
+                <text x="18" y="88" fill="#8b95a3" font-size="11">电源</text>
+
+                <!-- 上支路：公共电阻 -->
+                <line x1="140" y1="40" x2="260" y2="40" stroke="#9aa8b6" stroke-width="2.5"/>
+                <path d="M260,40 l10,-9 l12,18 l12,-18 l12,18 l12,-18 l2,9" fill="none" stroke="#D0C4E8" stroke-width="3" stroke-linejoin="round"/>
+                <line x1="320" y1="40" x2="430" y2="40" stroke="#9aa8b6" stroke-width="2.5"/>
+                <line x1="430" y1="40" x2="430" y2="80" stroke="#9aa8b6" stroke-width="2.5"/>
+                <text x="283" y="20" fill="#7665a0" font-size="11">R</text>
+
+                <!-- 下支路 -->
+                <line x1="80" y1="180" x2="430" y2="180" stroke="#9aa8b6" stroke-width="2.5"/>
+                <line x1="430" y1="180" x2="430" y2="120" stroke="#9aa8b6" stroke-width="2.5"/>
+                <line x1="200" y1="100" x2="200" y2="180" stroke="#c6d2dd" stroke-width="2.5" stroke-dasharray="4 4"/>
+
+                <!-- 单刀双掷开关 -->
+                <circle cx="200" cy="40" r="4" fill="#5a6472"/>
+                <circle id="contactCharge" cx="140" cy="40" r="4" fill="#B8E8D0" stroke="#7fbf9f"/>
+                <circle id="contactDischarge" cx="200" cy="100" r="4" fill="#eef2f6" stroke="#c6d2dd"/>
+                <line id="swBlade" x1="200" y1="40" x2="142" y2="40" stroke="#5a6472" stroke-width="3.5" stroke-linecap="round"/>
+                <text x="122" y="28" fill="#3f8067" font-size="10">充电端</text>
+                <text x="210" y="104" fill="#8b95a3" font-size="10">放电端</text>
+
+                <!-- 电容 -->
+                <line x1="398" y1="80" x2="462" y2="80" stroke="#F4978E" stroke-width="5" stroke-linecap="round"/>
+                <line x1="398" y1="120" x2="462" y2="120" stroke="#7FB3D5" stroke-width="5" stroke-linecap="round"/>
+                <g id="capCharges"></g>
+                <text x="470" y="105" fill="#5a6472" font-size="12" font-style="italic">C</text>
+
+                <g id="rcParticles"></g>
+                <text id="rcFlowLabel" x="250" y="205" fill="#4e7f9e" font-size="11" text-anchor="middle">充电：电流从电源正极流向正极板</text>
+              </svg>
+            </div>
+            <p class="note" style="font-size:10.5px;color:var(--ink-3);margin-top:6px">小圆点表示常规电流方向。充电时电荷逐个增加、电流逐渐衰减；放电时电源脱离，电流反向、电荷逐个减少直到消失。</p>
+          </article>
+
+          <article class="card tint-peach">
+            <div class="card-head">
+              <div class="sec-title">电压与电流曲线 <span class="sec-sub">u-t / i-t</span></div>
+              <span class="tag peach" id="rcModeTag">充电中</span>
+            </div>
+            <div class="status-row">
+              <div class="status-box"><div class="k">电容电压 u</div><div class="v" id="stU">0.00</div></div>
+              <div class="status-box"><div class="k">电流 i</div><div class="v" id="stI">1.00</div></div>
+              <div class="status-box"><div class="k">极板电荷符号</div><div class="v" id="stQ">0</div></div>
+            </div>
+            <canvas id="rcCurve" class="mini-canvas" width="960" height="290" role="img" aria-label="充放电过程中电压 u 与电流 i 随时间变化的曲线"></canvas>
+            <div class="legend">
+              <span><i class="lu"></i>u(t) 电容电压</span>
+              <span><i class="li"></i>i(t) 电流（放电为负）</span>
+            </div>
+            <div class="sym" style="margin-top:9px">充电：<b>u = U(1−e<sup>−t/RC</sup>)</b>，<b>i</b> 由大变小至 0；放电：<b>u = U₀e<sup>−t/RC</sup></b>，<b>i</b> 反向且逐渐衰减。时间常数 τ = RC 决定快慢。</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ④ 拓展模型（手风琴） ==================== -->
+    <section class="panel" id="panel-extend" role="tabpanel" aria-label="拓展模型">
+      <div class="accordion">
+        <div class="acc-item open">
+          <button class="acc-head" type="button" aria-expanded="true"><span class="acc-left"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--lavender);display:inline-block"></span>带电粒子在板间电场中的运动 <span class="tag lavender">类平抛</span></span><span class="acc-chevron">▶</span></button>
+          <div class="acc-body">
+            <div class="acc-body-grid">
+              <div>
+                <div class="fx">F = qE，a = qE/m　｜　x = v₀t，y = ½at² = (qE / 2mv₀²)x²</div>
+                <div class="sym">水平匀速、竖直匀加速 → 板间轨迹为抛物线；飞出后沿切线匀速直线。偏转量随 q、E 增大而增大，随 m、v₀ 增大而减小。</div>
+              </div>
+              <canvas id="particleCv" class="mini-canvas" width="1040" height="480" role="img" aria-label="带电粒子在偏转电场中沿抛物线运动的动画"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item">
+          <button class="acc-head" type="button" aria-expanded="false"><span class="acc-left"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--sky);display:inline-block"></span>LC 振荡电路 <span class="tag sky">电磁振荡</span></span><span class="acc-chevron">▶</span></button>
+          <div class="acc-body">
+            <div class="acc-body-grid">
+              <div>
+                <div class="fx">T = 2π√<span class="rad">LC</span>　｜　f = 1 / (2π√<span class="rad">LC</span>)</div>
+                <div class="sym">q 最大时 i=0（电场能最大）；i 最大时 q=0（磁场能最大）。电场能与磁场能每 <b>T/2</b> 转化一次，理想无阻尼时总能量守恒。极板电荷符号随相位增减并翻转。</div>
+              </div>
+              <div class="acc-body-grid" style="grid-template-columns:200px minmax(0,1fr)">
+                <svg id="lcSvg" viewBox="0 0 220 160" role="img" aria-label="LC 振荡电路示意图">
+                  <path d="M50,30 H170 M50,130 H170 M50,30 V70 M50,86 V130 M170,30 V50 M170,110 V130" fill="none" stroke="#9aa8b6" stroke-width="2.5"/>
+                  <path d="M170,50 c-16,6 -16,14 0,20 c16,6 16,14 0,20 c-16,6 -16,14 0,20" fill="none" stroke="#D0C4E8" stroke-width="3.5"/>
+                  <text x="184" y="88" fill="#7665a0" font-size="13" font-style="italic">L</text>
+                  <rect id="lcGlow" x="36" y="64" width="28" height="28" rx="4" fill="#FFB3BA" opacity=".25"/>
+                  <line x1="38" y1="70" x2="62" y2="70" stroke="#F4978E" stroke-width="4"/>
+                  <line x1="38" y1="86" x2="62" y2="86" stroke="#7FB3D5" stroke-width="4"/>
+                  <g id="lcChargeTop"></g>
+                  <g id="lcChargeBottom"></g>
+                  <text x="18" y="80" fill="#5a6472" font-size="12" font-style="italic">C</text>
+                  <path id="arrR" d="M112,25 l11,5 -11,5 z" fill="#7FB3D5"/>
+                  <path id="arrL" d="M108,25 l-11,5 11,5 z" fill="#7FB3D5" style="display:none"/>
+                  <text x="122" y="22" fill="#4e7f9e" font-size="11" font-style="italic">i</text>
+                </svg>
+                <canvas id="lcCv" class="mini-canvas" width="1040" height="440" role="img" aria-label="LC 振荡电荷 q 与电流 i 的正弦曲线动画"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item">
+          <button class="acc-head" type="button" aria-expanded="false"><span class="acc-left"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--mint);display:inline-block"></span>电容器的串联与并联 <span class="tag mint">等效电容</span></span><span class="acc-chevron">▶</span></button>
+          <div class="acc-body">
+            <div class="fx">串联 1/C = Σ1/Cᵢ（等电荷 Q）　｜　并联 C = ΣCᵢ（等电压 U）</div>
+            <div class="circuit-row">
+              <div class="circuit-mini">
+                <svg viewBox="0 0 150 110" role="img" aria-label="两个电容串联的电路图">
+                  <path d="M10,35 H58 M75,35 H118 M135,35 V85 M135,85 H100 M85,85 H10 V35" fill="none" stroke="#9aa8b6" stroke-width="2.5"/>
+                  <line x1="58" y1="22" x2="58" y2="48" stroke="#F4978E" stroke-width="3.5"/>
+                  <line x1="68" y1="22" x2="68" y2="48" stroke="#F4978E" stroke-width="3.5"/>
+                  <line x1="100" y1="22" x2="100" y2="48" stroke="#7FB3D5" stroke-width="3.5"/>
+                  <line x1="110" y1="22" x2="110" y2="48" stroke="#7FB3D5" stroke-width="3.5"/>
+                  <path d="M68,35 H100" stroke="#9aa8b6" stroke-width="2.5"/>
+                  <line x1="85" y1="77" x2="85" y2="93" stroke="#F4978E" stroke-width="3.5"/>
+                  <line x1="94" y1="81" x2="94" y2="89" stroke="#7FB3D5" stroke-width="3.5"/>
+                  <text x="52" y="15" fill="#a35d65" font-size="11">C₁</text><text x="94" y="15" fill="#4e7f9e" font-size="11">C₂</text>
+                  <text x="18" y="65" fill="#8b95a3" font-size="10">Q₁ = Q₂</text>
+                </svg>
+                <p>串联电荷量相等，电压按电容反比分配；等效电容比任一个都小（相当于增大 d）。</p>
+              </div>
+              <div class="circuit-mini">
+                <svg viewBox="0 0 150 110" role="img" aria-label="两个电容并联的电路图">
+                  <path d="M15,25 H135 M15,85 H135 M15,25 V85 M135,25 V85" fill="none" stroke="#9aa8b6" stroke-width="2.5"/>
+                  <path d="M15,55 H60 M90,55 H135" fill="none" stroke="#9aa8b6" stroke-width="2.5"/>
+                  <line x1="60" y1="42" x2="60" y2="68" stroke="#F4978E" stroke-width="3.5"/>
+                  <line x1="70" y1="42" x2="70" y2="68" stroke="#F4978E" stroke-width="3.5"/>
+                  <line x1="98" y1="42" x2="98" y2="68" stroke="#7FB3D5" stroke-width="3.5"/>
+                  <line x1="108" y1="42" x2="108" y2="68" stroke="#7FB3D5" stroke-width="3.5"/>
+                  <path d="M70,55 H98" stroke="#9aa8b6" stroke-width="2.5"/>
+                  <line x1="72" y1="85" x2="72" y2="100" stroke="#F4978E" stroke-width="3.5"/>
+                  <line x1="81" y1="89" x2="81" y2="97" stroke="#7FB3D5" stroke-width="3.5"/>
+                  <text x="54" y="36" fill="#a35d65" font-size="11">C₁</text><text x="92" y="36" fill="#4e7f9e" font-size="11">C₂</text>
+                  <text x="40" y="80" fill="#8b95a3" font-size="10">U₁ = U₂</text>
+                </svg>
+                <p>并联电压相等，电荷量按电容正比分配；等效电容为各电容之和（相当于增大 S）。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item">
+          <button class="acc-head" type="button" aria-expanded="false"><span class="acc-left"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--peach);display:inline-block"></span>电容式传感器 <span class="tag peach">C 的变化检测</span></span><span class="acc-chevron">▶</span></button>
+          <div class="acc-body">
+            <div class="fx">被测量 → 改变 d / S / ε<sub class="math-sub">r</sub> → 改变 C → 转换为电信号</div>
+            <div class="sensor-row">
+              <div class="sensor-mini">
+                <svg viewBox="0 0 130 90" role="img" aria-label="压力传感器：膜片受压下弯使 d 减小">
+                  <rect x="20" y="20" width="90" height="8" rx="2" fill="#FFB3BA"/>
+                  <path d="M22,66 Q65,80 108,66" fill="none" stroke="#7FB3D5" stroke-width="6"/>
+                  <path d="M65,6 V26 M58,18 L65,26 L72,18" fill="none" stroke="#F4978E" stroke-width="2.5"/>
+                  <text x="70" y="10" fill="#a35d65" font-size="11">F</text>
+                  <text x="46" y="55" fill="#8b95a3" font-size="10">d ↓</text>
+                </svg>
+                <p><b>压力</b>：膜片下弯 → d↓ → C↑</p>
+              </div>
+              <div class="sensor-mini">
+                <svg viewBox="0 0 130 90" role="img" aria-label="位移传感器：极板错开使正对面积减小">
+                  <rect x="18" y="22" width="24" height="50" fill="#FFB3BA" rx="2"/>
+                  <rect x="80" y="12" width="24" height="50" fill="#BFE3F5" rx="2"/>
+                  <path d="M92,60 H118 M110,53 L118,60 L110,67" fill="none" stroke="#F4978E" stroke-width="2.5"/>
+                  <text x="96" y="82" fill="#8b95a3" font-size="10">S ↓</text>
+                </svg>
+                <p><b>位移</b>：极板错开 → S↓ → C↓</p>
+              </div>
+              <div class="sensor-mini">
+                <svg viewBox="0 0 130 90" role="img" aria-label="液位传感器：液面上升改变等效介电常数">
+                  <rect x="26" y="8" width="7" height="72" fill="#FFB3BA" rx="1"/>
+                  <rect x="97" y="8" width="7" height="72" fill="#BFE3F5" rx="1"/>
+                  <rect x="34" y="46" width="62" height="34" fill="#BFE3F5" opacity=".8"/>
+                  <path d="M34,46 H96" stroke="#7FB3D5" stroke-width="2"/>
+                  <path d="M108,30 V14 M101,21 L108,14 L115,21" fill="none" stroke="#F4978E" stroke-width="2.5"/>
+                  <text x="52" y="66" fill="#3f6f8d" font-size="10">液体 εr&gt;1</text>
+                </svg>
+                <p><b>液位</b>：液面↑ → 等效 εr↑ → C↑</p>
+              </div>
+            </div>
+            <p class="note" style="margin-top:8px">共同本质：C ∝ εrS/d。测出电容 C 的变化，即可反推压力、位移、液位等被测量。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/simulator.js"></script>
+<script src="js/animations.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
