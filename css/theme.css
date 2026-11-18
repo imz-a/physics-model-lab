@@ -1,0 +1,68 @@
+/* ============ theme.css — 马卡龙配色变量 / 字体 / reset ============ */
+:root{
+  /* 马卡龙主色 */
+  --pink:#FFB3BA;
+  --peach:#FFD8A8;
+  --cream:#FFF3BF;
+  --mint:#B8E8D0;
+  --sky:#BFE3F5;
+  --lavender:#D0C4E8;
+
+  /* 语义色：增大 / 减小 / 不变（柔和，不刺眼） */
+  --up:#F4978E;        /* 珊瑚粉 */
+  --down:#7FB3D5;      /* 马卡龙蓝 */
+  --same:#9AA4B0;      /* 中灰 */
+
+  /* 文字与背景 */
+  --ink:#3a4250;
+  --ink-2:#5a6472;
+  --ink-3:#8b95a3;
+  --bg:#fafbfc;
+  --surface:#ffffff;
+  --surface-soft:#fcfdfe;
+
+  /* 描边 / 阴影 / 圆角 */
+  --line:#e8edf2;
+  --line-2:#dce4ec;
+  --shadow:0 2px 8px rgba(88,108,132,.05), 0 10px 24px rgba(88,108,132,.055);
+  --shadow-hover:0 4px 14px rgba(88,108,132,.08), 0 14px 30px rgba(88,108,132,.07);
+  --r-lg:16px;
+  --r-md:12px;
+  --r-sm:8px;
+
+  --header-h:64px;
+  --font:"PingFang SC","Microsoft YaHei","Hiragino Sans GB","Segoe UI",system-ui,sans-serif;
+  --font-math:"Cambria Math","Times New Roman",Georgia,serif;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{height:100%}
+body{
+  height:100%;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:14px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+h1,h2,h3,h4,p{margin:0}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid #7FB3D5;outline-offset:2px;border-radius:6px}
+::selection{background:#D0C4E8;color:#3a4250}
+
+/* 细窄滚动条，浅色 */
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:2px solid var(--bg)}
+*::-webkit-scrollbar-thumb:hover{background:#cbd6e2}
+
+.math{font-family:var(--font-math);font-style:italic;color:var(--ink)}
+.math-sub{font-size:.68em;vertical-align:-.25em;font-style:normal}
+.frac{display:inline-grid;grid-template-rows:auto auto;text-align:center;vertical-align:middle;margin:0 .18em;line-height:1.1}
+.frac .num{border-bottom:1.4px solid currentColor;padding:0 .32em .05em}
+.frac .den{padding:.05em .32em 0}
+.rad{border-top:1.2px solid currentColor;padding:0 2px 0 1px}
