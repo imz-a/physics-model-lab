@@ -1,88 +1,128 @@
-/* ============ layout.css — 骨架 / 标签页 / 一屏布局 / 响应式 ============ */
-body{overflow:hidden}
-.app{height:100vh;display:flex;flex-direction:column}
-
-.topbar{
-  height:var(--header-h);
-  flex:none;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  padding:0 22px;
-  background:var(--surface);
-  border-bottom:1px solid var(--line);
-  z-index:10;
+/* ============================================================
+ * layout.css — 整体布局骨架 / 响应式
+ * 桌面：顶部栏 + 左侧模型导航 + 右侧自适应主区，各自独立滚动，一屏铺满视口。
+ * 窄屏（<900px）：侧栏收为抽屉，由顶部菜单按钮呼出。
+ * ============================================================ */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
 }
-.brand{display:flex;align-items:center;gap:10px;min-width:0}
-.brand-mark{
-  width:34px;height:34px;flex:none;border-radius:10px;
-  display:grid;place-items:center;
-  background:var(--pink);color:#8c4f55;
-  font-family:var(--font-math);font-style:italic;font-size:20px;font-weight:700;
+
+/* ---------- 顶部 ---------- */
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 18px 36px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
 }
-.brand-title{font-size:16px;font-weight:700;letter-spacing:.2px;white-space:nowrap}
-.brand-sub{font-size:10px;color:var(--ink-3);letter-spacing:.5px;white-space:nowrap}
 
-.tabs{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
-.tab{
-  border:1px solid transparent;background:transparent;color:var(--ink-2);
-  border-radius:99px;padding:7px 13px;font-size:13px;font-weight:600;
-  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
-  transition:background .18s,color .18s,border-color .18s;
+.topbar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
-.tab:hover{background:var(--surface-soft);border-color:var(--line)}
-.tab.active{background:var(--mint);border-color:#a7ddc4;color:#2f6a55}
-.tab .tab-num{
-  width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
-  background:rgba(255,255,255,.75);font-size:11px;color:var(--ink-2);flex:none;
+
+.menu-toggle { display: none; }
+
+/* ---------- 工作区 ---------- */
+.workspace {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 0;
 }
-.tab.active .tab-num{background:#fff;color:#2f6a55}
 
-main{flex:1;min-height:0;overflow:hidden;position:relative}
-.panel{display:none;height:100%;overflow-y:auto;overflow-x:hidden;padding:18px 22px 26px}
-.panel.active{display:block}
-.wrap{max-width:1240px;margin:0 auto}
-
-/* 各标签页的紧凑栅格 */
-.grid-sim{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);gap:14px;align-items:start}
-.side-col{display:flex;flex-direction:column;gap:12px;min-width:0}
-.grid-charge{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:14px;align-items:start}
-.grid-concepts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:stretch}
-
-.sec-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
-.sec-sub{font-size:11px;color:var(--ink-3);font-weight:400}
-.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-
-/* 手风琴（拓展模型一次只展开一个） */
-.accordion{display:flex;flex-direction:column;gap:10px;max-width:1240px;margin:0 auto}
-.acc-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
-.acc-head{
-  width:100%;border:0;background:transparent;text-align:left;
-  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;
-  font-size:14px;font-weight:700;color:var(--ink);
+.sidebar {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
 }
-.acc-head:hover{background:var(--surface-soft)}
-.acc-head .acc-left{display:flex;align-items:center;gap:10px;min-width:0}
-.acc-head .acc-chevron{font-size:12px;color:var(--ink-3);transition:transform .2s}
-.acc-item.open .acc-chevron{transform:rotate(90deg)}
-.acc-body{display:none;padding:2px 16px 16px;border-top:1px solid var(--line)}
-.acc-item.open .acc-body{display:block}
-.acc-body-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:center}
 
-@media(max-width:1080px){
-  body{overflow:auto}
-  .app{height:auto;min-height:100vh}
-  main{overflow:visible}
-  .panel{height:auto;overflow:visible;min-height:calc(100vh - var(--header-h))}
-  .grid-sim,.grid-charge,.acc-body-grid{grid-template-columns:1fr}
-  .grid-concepts{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .topbar{height:auto;min-height:var(--header-h);flex-wrap:wrap;padding:10px 14px}
-  .tabs{flex-wrap:wrap}
+.sidebar__head {
+  flex: 0 0 auto;
+  padding: 26px 26px 14px;
 }
-@media(max-width:680px){
-  .grid-concepts{grid-template-columns:1fr}
-  .tab{font-size:12px;padding:6px 10px}
-  .brand-sub{display:none}
-  .panel{padding:14px 12px 24px}
+
+.model-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 28px;
+}
+
+.main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 36px 44px 56px;
+  background: var(--bg);
+}
+
+.main__inner {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.drawer-overlay { display: none; }
+
+/* ---------- 窄屏：抽屉式侧栏 ---------- */
+@media (max-width: 900px) {
+  .topbar {
+    gap: 12px;
+    padding: 14px 20px;
+  }
+
+  .topbar__right { gap: 10px; }
+
+  .menu-toggle { display: inline-flex; }
+
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(86vw, 360px);
+    transform: translateX(-105%);
+    transition: transform .24s ease;
+    box-shadow: 8px 0 32px rgba(88, 108, 132, .12);
+  }
+
+  .sidebar.is-open { transform: translateX(0); }
+
+  .drawer-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(58, 66, 80, .18);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .24s ease, visibility .24s ease;
+  }
+
+  .drawer-overlay.is-visible { opacity: 1; visibility: visible; }
+
+  .main { padding: 26px 22px 44px; }
+}
+
+@media (max-width: 620px) {
+  .topbar { flex-wrap: wrap; }
+  .topbar__right { width: 100%; margin-left: 0; }
+  .topbar__search { flex: 1 1 auto; }
+  .main { padding: 22px 16px 40px; }
 }
