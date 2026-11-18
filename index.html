@@ -67,19 +67,37 @@
   <script src="js/catalog.js"></script>
 
   <!--
-    交互模块：普通 script，按固定顺序加载；文件尚未产出时浏览器 404 不会阻断后续脚本。
+    交互模块：普通 script，按 catalog 的模型顺序加载；文件尚未产出时浏览器 404 不会阻断后续脚本。
     模块通过 window.ModelLab.modules[模型id] = { render(container, extIndex){ ...; return cleanup; } } 注册。
+    以下覆盖全部 27 个模型 id，新模块文件产出后无需再改本文件即可自动生效。
   -->
-  <script src="js/modules/capacitor.js"></script>
   <script src="js/modules/spring-oscillator.js"></script>
   <script src="js/modules/pendulum.js"></script>
+  <script src="js/modules/inclined-block.js"></script>
+  <script src="js/modules/conveyor-belt.js"></script>
+  <script src="js/modules/connected-bodies.js"></script>
+  <script src="js/modules/circular-motion.js"></script>
   <script src="js/modules/projectile-motion.js"></script>
+  <script src="js/modules/collision.js"></script>
+  <script src="js/modules/block-plate.js"></script>
+  <script src="js/modules/capacitor.js"></script>
   <script src="js/modules/charged-particle-electric.js"></script>
+  <script src="js/modules/equipotential.js"></script>
+  <script src="js/modules/electrostatic-induction.js"></script>
   <script src="js/modules/charged-particle-magnetic.js"></script>
+  <script src="js/modules/velocity-selector.js"></script>
+  <script src="js/modules/mass-spectrometer.js"></script>
+  <script src="js/modules/cyclotron.js"></script>
+  <script src="js/modules/electromagnetic-flowmeter.js"></script>
   <script src="js/modules/rod-cutting-field.js"></script>
+  <script src="js/modules/loop-entering-field.js"></script>
+  <script src="js/modules/self-mutual-induction.js"></script>
+  <script src="js/modules/lc-oscillation.js"></script>
   <script src="js/modules/ideal-gas.js"></script>
+  <script src="js/modules/refraction-total-reflection.js"></script>
   <script src="js/modules/double-slit.js"></script>
   <script src="js/modules/photoelectric-effect.js"></script>
+  <script src="js/modules/nuclear-decay.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
