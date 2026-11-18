@@ -39,6 +39,17 @@
     return (mod && typeof mod.render === 'function') ? mod : null;
   }
 
+  // 显示层覆盖：有有效交互模块即视为完工；否则沿用 catalog.js 的 status 数据
+  function displayStatus(m) {
+    return moduleOf(m) ? 'done' : m.status;
+  }
+
+  function statusTag(m) {
+    var s = displayStatus(m);
+    return '<span class="model-item__tag ' + (s === 'done' ? 'tag--done' : 'tag--todo') + '">'
+      + STATUS_TEXT[s] + '</span>';
+  }
+
   function validIndex(model, n) {
     n = Number(n);
     var max = model.extensions.length - 1;
@@ -105,8 +116,7 @@
           + ' data-model-id="' + m.id + '" title="' + m.name + '"'
           + (active ? ' aria-current="true"' : '') + '>'
           + '<span class="model-item__name">' + m.name + '</span>'
-          + '<span class="model-item__tag ' + (m.status === 'done' ? 'tag--done' : 'tag--todo') + '">'
-          + STATUS_TEXT[m.status] + '</span>'
+          + statusTag(m)
           + '</button>';
       });
       html += '</div></section>';
@@ -145,8 +155,7 @@
     els.modelHeader.innerHTML = '<div>'
       + '<div class="model-header__meta">'
       + '<span class="subject-tag">' + cat.name + '</span>'
-      + '<span class="model-item__tag ' + (m.status === 'done' ? 'tag--done' : 'tag--todo') + '">'
-      + STATUS_TEXT[m.status] + '</span>'
+      + statusTag(m)
       + '</div>'
       + '<h2 class="model-header__title" id="modelTitle">' + m.name + '</h2>'
       + '<p class="model-header__brief">' + m.brief + '</p>'
@@ -188,18 +197,11 @@
         + '</div></div>';
     }).join('');
 
-    // 电容器为样板页面，额外给出已有完整页面的入口（仅链接，不嵌入）
-    var link = m.id === 'capacitor'
-      ? '<a class="external-link" href="../physics-lab/index.html" target="_blank" rel="noopener">'
-        + '查看完整电容器页面 <span class="external-link__arrow" aria-hidden="true">↗</span></a>'
-      : '';
-
     els.panel.innerHTML = '<div class="placeholder">'
       + '<span class="placeholder__badge">内容槽位 · 待填充</span>'
       + '<h3 class="placeholder__title">《' + m.name + ' · ' + ext + '》—— 模型内容待填充</h3>'
       + '<p class="placeholder__desc">这里将承载该拓展模型的完整教学内容。当前版本仅演示框架与交互（切换模型 / 切换拓展模型），物理计算、动画与题目将在后续版本逐项填充。</p>'
       + '<div class="slot-grid">' + slotHtml + '</div>'
-      + link
       + '</div>';
   }
 
