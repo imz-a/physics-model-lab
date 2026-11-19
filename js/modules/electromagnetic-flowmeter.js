@@ -147,7 +147,7 @@
       Q[1].expl=up?'正离子受洛伦兹力向上，上极板带正电，电势高。':'正离子受洛伦兹力向下，下极板带正电，电势高。';
       var c=calc(s);
       Q[2].text='当前 B='+nf(s.B)+' T，d='+nf(s.d)+' m，v='+nf(s.v)+' m/s，求体积流量 Q（单位 m³/s）。';
-      Q[2].ans=c.Q;Q[2].unit='m³/s';Q[2].expl='Q = v·πd²/4 = '+nf(s.v)+'×π×'+nf(s.d)+'²/4 = '+c.Q.toExponential(2)+' m³/s；也可由 πdU/(4B) = '+nf(c.U)+' 反推，结果相同。';
+      Q[2].ans=c.Q;Q[2].unit='m³/s';Q[2].expl='Q = v·πd²/4 = '+nf(s.v)+'×π×'+nf(s.d)+'²/4 = '+c.Q.toExponential(2)+' m³/s；也可由 πdU/(4B) = '+c.Q.toExponential(2)+' m³/s 反推，结果相同。';
     }
     function paintQuiz(){if(idx!==3)return;quizData();q('[data-qt="1"]').textContent=Q[1].text;q('[data-qt="2"]').textContent=Q[2].text;q('[data-unit]').textContent=Q[2].unit;var b=q('[data-op="1"]');b.innerHTML='';Q[1].opts.forEach(function(t,i){var x=doc.createElement('button');x.type='button';x.textContent=String.fromCharCode(65+i)+'. '+t;x.setAttribute('data-i',i);b.appendChild(x);});}
     function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;q('[data-fb="1"]').textContent='';q('[data-fb="2"]').textContent='';paintQuiz();}}
