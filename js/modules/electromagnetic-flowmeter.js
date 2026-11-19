@@ -35,6 +35,8 @@
   function rd(k,l,u){return '<div><span>'+l+'</span><b data-r="'+k+'">—</b> '+u+'</div>';}
   function quiz(){return '<div class="fm-qz"><h5>第 1 题 · 极性判断</h5><div data-qt="1"></div><div class="fm-opts" data-op="1"></div><button class="fm-btn" data-sub="1">提交答案</button><div class="fm-fb" data-fb="1" hidden></div><h5>第 2 题 · 流量计算</h5><div data-qt="2"></div><div class="fm-in"><input type="number" step="any" data-num placeholder="输入数值"><span data-unit></span><button class="fm-btn" data-sub="2">提交答案</button></div><div class="fm-fb" data-fb="2" hidden></div></div>';}
   function calc(s){var U=s.B*s.d*s.v,Q=Math.PI*s.d*s.d*s.v/4,E=s.B*s.v;return{U:U,Q:Q,E:E};}
+  var FM_CHART_TITLE=['感应电压 U 随流速 v 变化','流量 Q 与电压 U 的正比关系','电压 U 的极性 · 方向判定','测量量换算链 · 四量关系'];
+  var FM_CHART_HINT=['U = B·d·v，斜率为 B·d','Q = πdU/(4B)，测得 U 即可反推 Q','B 向里时上极板电势高，向外时翻转','当前 B / d / v / U 的量级对比'];
   function build(idx,s){
     var c=calc(s),ex='';
     if(idx===1){ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--sky,#BFE3F5)"></i>U 与各物理量 · Q—U 关系</div>'+seg('rel',[['v','U—v'],['B','U—B'],['d','U—d'],['U','Q—U']],s.rel||'v')+'<div data-chart></div><div class="fm-rel"><div><span>U = B·d·v</span><b data-r="u">—</b></div><div><span>两极间场强 E = Bv</span><b data-r="e">—</b></div><div><span>平衡条件 qvB = qE</span><b>已建立</b></div></div></div>'
@@ -45,7 +47,8 @@
     else ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--mint,#B8E8D0)"></i>核心规律</div><div class="fm-f"><b>qvB = qE → E = Bv</b><br>电极间电势差 <b>U = Bvd</b><br>体积流量 <b>Q = v·πd²/4 = πdU/(4B)</b></div><div class="fm-n">B 向里时粉色正离子向上、蓝色负离子向下偏转（B 向外时整体翻转），两极积累异号电荷形成电场。</div></div>'
       +'<div class="fm-card"><div class="fm-t"><i style="background:var(--sky,#BFE3F5)"></i>方向判定</div><div class="fm-f">用左手定则：四指指正电荷运动方向（向右），拇指即受力方向。<br>B 向里（×）时正离子向上 → 上极板电势高；B 向外（·）时正离子向下 → 下极板电势高。可用顶部按钮切换磁场方向。</div></div>';
     return '<div class="fm-w"><div class="fm-bar"><span class="fm-chip">电磁感应应用 · 流量计</span>'+seg('bdir',[['in','B 向里 ×'],['out','B 向外 ·']],saved.bdir||'in')+'<span class="fm-sp"></span><button class="fm-btn fm-btn--p" data-play>'+(s.playing?'⏸ 暂停':'▶ 播放')+'</button><button class="fm-btn" data-reset>↺ 重置</button></div>'
-      +'<div class="fm-grid"><div class="fm-card"><div class="fm-t"><i></i>导电液体在磁场中流动<span class="fm-hint">电场平衡后电压稳定</span></div><div data-cv></div></div>'
+      +'<div class="fm-grid"><div class="fm-card"><div class="fm-t"><i></i>导电液体在磁场中流动<span class="fm-hint">电场平衡后电压稳定</span></div><div data-cv></div>'
+      +'<div class="fm-t" style="margin-top:12px"><i style="background:var(--sky,#BFE3F5)"></i>'+FM_CHART_TITLE[idx]+'<span class="fm-hint">'+FM_CHART_HINT[idx]+'</span></div><div data-datachart></div></div>'
       +'<div class="fm-side"><div class="fm-card"><div class="fm-t"><i style="background:var(--pink,#FFB3BA)"></i>参数</div>'
       +'<label class="fm-ctrl"><span>磁感应强度 B<b data-o="B"></b></span><input type="range" data-k="B" min="0.2" max="2" step="0.1" value="'+s.B+'"></label>'
       +'<label class="fm-ctrl"><span>管径 d<b data-o="d"></b></span><input type="range" data-k="d" min="0.02" max="0.2" step="0.01" value="'+s.d+'"></label>'
@@ -91,12 +94,40 @@
     label(ctx,'— 当前   ┄ 变化前',R-2,T+10,C.ink3,'right');
   }
 
+  function drawDataChart(view, idx, s) {
+    var K=global.ChartKit; if(!K) return; var C2=K.colors, c=calc(s);
+    if(idx===0){
+      var pts=[],ref=[];
+      for(var i=0;i<=40;i++){var vv=0.2+2.8*i/40;pts.push([vv,s.B*s.d*vv]);ref.push([vv,s.ref.B*s.ref.d*vv]);}
+      K.line(view,{title:'感应电压 U = B·d·v',xLabel:'流速 v',xUnit:'m/s',yLabel:'电压 U',yUnit:'V',legend:true,
+        series:[{name:'当前 B·d',color:C2.sky,width:2.6,points:pts},{name:'变化前',color:C2.ink3,dash:[5,4],width:1.6,points:ref}],
+        markers:[{x:s.v,y:c.U,label:'当前',color:C2.pink,cross:true,r:5}]});
+    } else if(idx===1){
+      var qpts=[],base=Math.PI*s.d/(4*s.B);
+      for(var j=0;j<=40;j++){var u=1.2*j/40;qpts.push([u,base*u]);}
+      K.line(view,{title:'Q = πdU/(4B) · 斜率 πd/4B',xLabel:'测得电压 U',xUnit:'V',yLabel:'流量 Q',yUnit:'m³/s',
+        series:[{name:'Q(U)',color:C2.mint,width:2.6,points:qpts}],
+        markers:[{x:c.U,y:c.Q,label:'当前 Q',color:C2.pink,cross:true,r:5}]});
+    } else if(idx===2){
+      K.bars(view,{title:'B 方向决定上/下极板电势高低',yLabel:'极板电势',yUnit:'相对',
+        bars:[{label:s.bdir==='in'?'上极板':'下极板',value:1,color:C2.pink,note:'高电势 +'},
+              {label:s.bdir==='in'?'下极板':'上极板',value:0.25,color:C2.sky,note:'低电势 −'}],yMax:1.3,
+        fmt:function(v){return v===1?'高':v===0.25?'低':'—';}});
+    } else {
+      K.bars(view,{title:'当前测量链：B · d · v → U',yLabel:'数值（各自量级）',yUnit:'',
+        bars:[{label:'B',value:s.B,color:C2.lav,note:'特斯拉 T'},{label:'d',value:s.d*10,color:C2.sky,note:'×0.1 m'},
+              {label:'v',value:s.v,color:C2.mint,note:'m/s'},{label:'U',value:c.U,color:C2.pink,note:'伏特 V'}],
+        fmt:function(v){return nf(v);}});
+    }
+  }
+
   NS.modules['electromagnetic-flowmeter']={render:function(container,extIndex){
     style();var idx=Math.max(0,Math.min(3,Number(extIndex)||0));
     var s={B:saved.B,d:saved.d,v:saved.v,playing:saved.playing,bdir:saved.bdir||'in',rel:'v',t:0};
     s.ref={B:s.B,d:s.d,v:s.v};   // 变化前参数快照（只供灰色虚线参考）
     container.innerHTML=build(idx,s);
     var v=view(1000,430);container.querySelector('[data-cv]').appendChild(v.el);
+    var dv=view(700,250);dv.el.style.background='#fff';container.querySelector('[data-datachart]').appendChild(dv.el);
     var chartV=idx===1?view(560,210):null;if(chartV){chartV.el.className='fm-c';container.querySelector('[data-chart]').appendChild(chartV.el);}
     var ctx=v.ctx,W=v.w,H=v.h,LST={},rAF=0,last=0,dead=false;
     var q=function(x){return container.querySelector(x);},qa=function(x){return container.querySelectorAll(x);};
@@ -195,6 +226,7 @@
       if(idx===2){set('area',(Math.PI*s.d*s.d/4).toExponential(2)+' m²');set('q',c.Q.toExponential(2));set('q2',(Math.PI*s.d*c.U/(4*s.B)).toExponential(2));}
       var st=q('[data-status]');if(st)st.textContent='qvB = qE 平衡后 E = Bv = '+nf(c.E)+' V/m，U = Bvd = '+nf(c.U)+' V（电势差大小）；'
         + (s.bdir==='in'?'B 向里：正离子向上，上电极电势高。':'B 向外：正离子向下，下电极电势高。');
+      drawDataChart(dv,idx,s);
       rAF=global.requestAnimationFrame(frame);
     }
     rAF=global.requestAnimationFrame(frame);
