@@ -199,8 +199,8 @@
       if(s.playing){s.t+=dt;s.heat+=state(s,s.t).I*state(s,s.t).I*s.R*dt;}
       var st=state(s,s.t);draw(st);
       var set=function(k,v){var e=q('[data-r="'+k+'"]');if(e)e.textContent=v;};
-      set('I',nf(st.I));set('tau',nf(st.tau)+' s');set('emf',nf(st.emf)+' V');set('W',nf(st.W)+' J');
-      if(idx===1){set('tau',nf(st.tau)+' s');set('i0',nf(st.I0)+' A');
+      set('I',nf(st.I));set('tau',nf(st.tau));set('emf',nf(st.emf));set('W',nf(st.W));
+      if(idx===1){set('tau',nf(st.tau));set('i0',nf(st.I0)+' A');
         // 通电上升：I=I0(1−e⁻⁵)≈0.993I0；断电衰减：I=I0e⁻⁵≈0.0067I0
         var five=s.on?st.I0*(1-Math.exp(-5)):st.I0*Math.exp(-5);
         set('five',nf(five)+' A');drawChart(st);}
