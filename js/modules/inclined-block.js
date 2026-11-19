@@ -247,7 +247,7 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         // 受力矢量
         var sc = 0.052;
         arrow(c, bx, by, bx, by + st.mass * G * sc, '#FFB3BA', 'mg');
-        arrow(c, bx, by, bx + Math.sin(th) * st.mass * G * Math.cos(th) * sc,
+        arrow(c, bx, by, bx - Math.sin(th) * st.mass * G * Math.cos(th) * sc,
           by - Math.cos(th) * st.mass * G * Math.cos(th) * sc, '#BFE3F5', 'N');
         var f = st.mu * st.mass * G * Math.cos(th);
         var fdir = st.v < -0.002 ? -1 : 1;   // 上滑(v<0)摩擦沿下滑=−g0.d；下滑时沿上滑=+g0.d
@@ -263,8 +263,10 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         line(c, x0, bot, x1, bot, '#cbd6e2', 1); line(c, x0, top, x0, bot, '#cbd6e2', 1);
         var th = st.theta * Math.PI / 180;
         if (extIndex === 0) {
-          var a = G * (Math.sin(th) - st.mu * Math.cos(th));
+          // 取分段后的实际加速度：与读数同源，停下（tanθ≤μ）时 a=0，不再恒画下滑加速度
+          var a = accel();
           text(c, 'a / (m/s²)', x0 + 3, top + 4, '#8b95a3', 11);
+          text(c, '按实际状态取 a（停下为 0）', x1 - 4, top + 4, '#9aa4b0', 10, 'right');
           line(c, x0, bot - (bot - top) / 2, x1, bot - (bot - top) / 2, '#e8edf2', 1, [4, 4]);
           line(c, x0, bot - a / 12 * (bot - top), x1, bot - a / 12 * (bot - top), '#FFB3BA', 2.5);
           var tt = st.t % 4;
