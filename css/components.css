@@ -53,7 +53,8 @@
   align-items: center;
   gap: 10px;
   min-width: 300px;
-  padding: 9px 16px;
+  min-height: 46px;
+  padding: 10px 18px;
   background: var(--bg);
   border: 1px solid var(--line-2);
   border-radius: 999px;
@@ -109,7 +110,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 11px 12px;
+  padding: 13px 12px;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
@@ -117,7 +118,8 @@
   font-weight: 600;
   text-align: left;
   color: var(--ink);
-  min-height: 44px;
+  min-height: 48px;
+  touch-action: manipulation;
 }
 .cat__head:hover { background: var(--surface-soft); }
 .cat__dot {
@@ -150,17 +152,18 @@
 
 .model-item {
   width: 100%;
-  min-height: 48px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 10px 10px 30px;
+  padding: 12px 10px 12px 30px;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
   text-align: left;
   font-size: 15px;
   color: var(--ink-2);
+  touch-action: manipulation;
   transition: background .15s ease, color .15s ease;
 }
 .model-item:hover { background: #f6f8fa; color: var(--ink); }
@@ -272,14 +275,15 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 9px 20px;
+  min-height: 46px;
+  padding: 11px 22px;
   border: 1px solid var(--line-2);
   border-radius: 999px;
   background: var(--surface);
   color: var(--ink-2);
   font-size: var(--fs-base);
   white-space: nowrap;
+  touch-action: manipulation;
   transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 .tab:hover { background: var(--tint-soft); border-color: var(--tint); color: var(--ink); }
@@ -396,3 +400,66 @@
   .placeholder { padding: 26px 22px 30px; }
   .placeholder__title { font-size: var(--fs-lg); }
 }
+
+/* ---------- 通用内容折叠块（app.js 后处理注入，原生 details/summary） ---------- */
+.ml-fold {
+  margin-top: 14px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+.ml-fold[open] { border-style: solid; background: transparent; }
+
+.ml-fold > .ml-fold__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 11px 16px;
+  list-style: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  user-select: none;
+  transition: background .15s ease;
+}
+.ml-fold > .ml-fold__summary::-webkit-details-marker { display: none; }
+.ml-fold > .ml-fold__summary:hover { background: var(--tint-soft); }
+.ml-fold > .ml-fold__summary:active { background: var(--tint-soft); }
+
+.ml-fold__mark {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+  font-size: 14px;
+  transition: transform .18s ease;
+}
+.ml-fold[open] > .ml-fold__summary .ml-fold__mark { transform: rotate(90deg); }
+
+.ml-fold__label {
+  flex: 0 0 auto;
+  padding: 3px 11px;
+  border: 1px solid var(--tint);
+  border-radius: 999px;
+  background: var(--tint-soft);
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.ml-fold__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+/* 展开后的原内容紧凑一点：去掉被包裹卡片可能与折叠外框重叠的外边距 */
+.ml-fold > .ml-fold__body { padding: 2px 10px 12px; }
+.ml-fold > .ml-fold__body > :first-child { margin-top: 0 !important; }
