@@ -238,10 +238,13 @@ input.sm-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       function curA() { return -omega() * omega() * curX(); }
 
       /* ---------- 控件绑定 ---------- */
+      // 「变化前」参数快照：滑块 input 前保存，x–t 图用灰虚线叠加对照
+      var refState = { k: state.k, m: state.m, A: state.A };
       qa('[data-slider]').forEach(function (el) {
         var key = el.getAttribute('data-slider');
         on(el, 'input', function () {
           var v = parseFloat(el.value);
+          refState = { k: state.k, m: state.m, A: state.A };
           state[key] = v;
           var out = q1('[data-out="' + key + '"]');
           if (out) out.textContent = (key === 'm' ? v.toFixed(1) : key === 'A' ? v.toFixed(1) : String(v));
@@ -473,26 +476,46 @@ input.sm-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         var T = period();
         line(c, pad.l, midY, w - pad.r, midY, '#e8edf2', 1, [4, 4]);
         text(c, '0', pad.l - 8, midY, '#8b95a3', 11, 'right');
-        text(c, '+' + state.A.toFixed(1), pad.l - 8, pad.t + 6, '#8b95a3', 11, 'right');
-        text(c, 't/s', w - pad.r, h - 6, '#8b95a3', 11, 'right');
-        text(c, 'x/m', pad.l + 2, pad.t + 4, '#8b95a3', 11);
+        text(c, 't / s', w - pad.r, h - 6, '#8b95a3', 11, 'right');
+        text(c, 'x / m', pad.l + 2, pad.t + 4, '#8b95a3', 11);
         var x0 = pad.l, x1 = w - pad.r;
-        var tMax = T * 3;
-        var yScale = (midY - pad.t - 6) / Math.max(0.2, state.A);
+        var tMax = 6;                                  // 固定时间窗 6 s，T 变化时疏密真实改变
+        var yScale = (midY - pad.t - 6) / 3;           // 固定纵轴量程 A_max=3 m，A 变化时波峰真实变高
+        text(c, '+3.0', pad.l - 8, pad.t + 6, '#8b95a3', 11, 'right');
+        text(c, '−3.0', pad.l - 8, h - pad.b - 2, '#8b95a3', 11, 'right');
+        for (var tk = 0; tk <= 6; tk++) {
+          var tx = x0 + tk / 6 * (x1 - x0);
+          line(c, tx, h - pad.b, tx, h - pad.b + 3, '#cbd6e2', 1);
+          text(c, String(tk), tx, h - 8, '#aab4c0', 10, 'center');
+        }
+        var changed = refState.k !== state.k || refState.m !== state.m || refState.A !== state.A;
+        if (changed) {
+          c.save(); c.beginPath();
+          var wRef = Math.sqrt(refState.k / refState.m);
+          for (var pxr = 0; pxr <= x1 - x0; pxr += 2) {
+            var ttr = pxr / (x1 - x0) * tMax;
+            var yyr = midY - refState.A * Math.sin(wRef * ttr) * yScale;
+            if (pxr === 0) c.moveTo(x0 + pxr, yyr); else c.lineTo(x0 + pxr, yyr);
+          }
+          c.strokeStyle = '#b9c2cc'; c.lineWidth = 1.8; c.setLineDash([5, 4]); c.stroke(); c.restore();
+          text(c, '变化前 A=' + refState.A.toFixed(1) + ' m', x0 + 6, h - pad.b - 12, '#9aa4b0', 10);
+        }
         c.save(); c.beginPath();
-        for (var px = 0; px <= x1 - x0; px += 2) {
-          var tt = px / (x1 - x0) * tMax;
-          var yy = midY - state.A * Math.sin(omega() * tt + 0) * yScale;
-          if (px === 0) c.moveTo(x0 + px, yy); else c.lineTo(x0 + px, yy);
+        for (var pxc = 0; pxc <= x1 - x0; pxc += 2) {
+          var tt = pxc / (x1 - x0) * tMax;
+          var yy = midY - state.A * Math.sin(omega() * tt) * yScale;
+          if (pxc === 0) c.moveTo(x0 + pxc, yy); else c.lineTo(x0 + pxc, yy);
         }
         c.strokeStyle = '#FFB3BA'; c.lineWidth = 2; c.stroke(); c.restore();
-        // 游标：按当前相位折算到 3 周期窗口内
-        var phaseIn = ((state.phase % (Math.PI * 6)) + Math.PI * 6) % (Math.PI * 6);
+        // 游标：在当前 6 s 窗口内按相位取模，保证游标始终落在曲线上
+        var phaseSpan = omega() * tMax;
+        var phaseIn = ((state.phase % phaseSpan) + phaseSpan) % phaseSpan;
         var tCur = phaseIn / omega();
         var cx = x0 + tCur / tMax * (x1 - x0);
         var cyv = midY - curX() * yScale;
         line(c, cx, pad.t, cx, h - pad.b, '#BFE3F5', 1, [3, 3]);
         dot(c, cx, cyv, 5, '#FFB3BA', '#fff');
+        text(c, 'A=' + state.A.toFixed(1) + ' m　T=' + T.toFixed(2) + ' s', x1 - 4, pad.t + 16, '#8b6fb0', 10, 'right');
       }
 
       function drawPeriod() {
