@@ -285,7 +285,7 @@
       draw();
       var P=pts[idx===2?'a':'p'],F=fieldAt(P.x,P.y,s.type,s.E),L=Math.hypot(F.x,F.y);
       var set=function(k,v){var e=q('[data-r="'+k+'"]');if(e)e.textContent=v;};
-      set('E',nf(L));set('phi',nf(phi(P.x,P.y,s.type,s.E))+' V');set('Ex',nf(F.x));set('Ey',nf(F.y));
+      set('E',nf(L));set('phi',nf(phi(P.x,P.y,s.type,s.E)));set('Ex',nf(F.x));set('Ey',nf(F.y));
       var st=q('[data-status]');if(st)st.textContent='电场线垂直于等势面，沿电场线方向电势降低最快。'+(s.type==='dipole'?' 等量异种连线的中垂面电势为零。':'');
       if(idx===2){set('pa',nf(phi(pts.a.x,pts.a.y,s.type,s.E))+' V');set('pb',nf(phi(pts.b.x,pts.b.y,s.type,s.E))+' V');}
       drawDataChart(dv,idx,s,pts[idx===2?'a':'p'],pts);
