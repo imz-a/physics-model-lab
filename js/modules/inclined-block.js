@@ -132,7 +132,7 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
             return '<div class="ib-barrow"><span>' + p[1] + '</span><div class="ib-bartrack"><div class="ib-barfill" data-bar="' + p[0] + '" style="background:' + p[2] + '"></div></div><b class="ib-barval" data-barval="' + p[0] + '">—</b></div>';
           }).join('') + '</div>'
         : extIndex === 3 ? quizHTML() : '';
-      var chartTitle = ['a–t 加速度图像', '沿斜面 / 垂直斜面分力', '能量—位移图像', 'μ–θ 临界关系'][extIndex];
+      var chartTitle = ['a–t 加速度图像', '沿斜面 / 垂直斜面分力', '能量—路程图像', 'μ–θ 临界关系'][extIndex];
       container.innerHTML = STYLE + '<div class="ib-wrap"><div class="ib-intro">'
         + '<span class="ib-chip hot">' + intro + '</span><span class="ib-chip">a = g(sinθ − μcosθ)</span><span class="ib-chip">读数为示意值</span></div>'
         + '<div class="ib-grid"><div><div class="ib-card"><div class="ib-hd"><h4>斜面运动演示</h4><small>改变参数，观察滑块与受力</small></div>'
@@ -142,14 +142,14 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         + '<div class="ib-card"><div class="ib-hd"><h4>' + chartTitle + '</h4><small>随参数实时更新</small></div><canvas class="ib-cv chart" data-cv="chart"></canvas></div></div>'
         + '<div><div class="ib-card"><div class="ib-hd"><h4>参数调节</h4><small>拖动即时改变</small></div>'
         + [['theta', '斜面倾角 θ', 10, 60, 1, 30, '°'], ['mu', '动摩擦因数 μ', 0, 0.8, 0.05, 0.2, ''],
-           ['mass', '滑块质量 m', 0.5, 5, 0.5, 2, 'kg'], ['v0', '初速度(沿斜面向上)', 0, 8, 0.5, 0, 'm/s']]
+           ['mass', '滑块质量 m', 0.5, 5, 0.5, 2, 'kg'], ['v0', '初速度(沿斜面向下)', 0, 8, 0.5, 4, 'm/s']]
           .map(function (r) { return '<div class="ib-ctrl"><label><span>' + r[1] + '</span><b><span data-out="' + r[0] + '">' + r[5] + '</span> ' + r[6] + '</b></label><input class="ib-range" type="range" data-slider="' + r[0] + '" min="' + r[2] + '" max="' + r[3] + '" step="' + r[4] + '" value="' + r[5] + '"></div>'; }).join('')
         + '<div class="ib-btns"><button type="button" class="ib-btn main" data-btn="toggle">暂停</button><button type="button" class="ib-btn" data-btn="reset">重新释放</button></div></div>'
         + '<div class="ib-card"><div class="ib-hd"><h4>实时读数</h4><small>随运动刷新</small></div><div class="ib-reads">'
-        + [['a', '加速度 a / (m/s²)', 1], ['v', '速度 v / (m/s)', 1], ['s', '位移 s / m', 1],
+        + [['a', '加速度 a / (m/s²)（下滑为正）', 1], ['v', '速度 v / (m/s)', 1], ['s', '下滑位移 s / m', 1],
            ['f', '摩擦力 f / N', 0], ['ek', '动能 Ek / J', 0], ['ep', '势能 Ep / J', 0]]
           .map(function (r) { return '<div class="ib-read' + (r[2] ? ' hl' : '') + '"><span>' + r[1] + '</span><b data-read="' + r[0] + '">—</b></div>'; }).join('')
-        + '</div><div class="ib-tip">下滑 a = g(sinθ − μcosθ)；上滑 a = −g(sinθ + μcosθ)。若 tanθ ≤ μ，停下后不再下滑。</div></div>'
+        + '</div><div class="ib-tip">约定：s 为沿斜面下滑位移（右上高端 s=0、左下底端 s=6 m），v&gt;0 表示下滑；v₀ 是沿斜面向下的初速度，初速 = +v₀，滑块从顶端单调下滑。下滑 a = g(sinθ − μcosθ)；若 tanθ ≤ μ 且中途停下，则静摩擦维持静止、不再下滑。全程 Ep + Ek + Q = mgL·sinθ + ½mv₀²，Q = f·累积路程（单调下滑时即 f·s）。</div></div>'
         + extra + '</div></div></div>';
 
       var q = function (s) { return container.querySelector(s); };
@@ -157,14 +157,20 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       var stage = mk(q('[data-cv="stage"]')), chart = mk(q('[data-cv="chart"]'));
       var disposers = [];
       function on(t, ty, fn, o) { t.addEventListener(ty, fn, o); disposers.push(function () { t.removeEventListener(ty, fn, o); }); }
-      var st = { theta: 30, mu: 0.2, mass: 2, v0: 0, s: 0, v: 0, path: 0, running: true, last: 0, t: 0 };
-      function reset() { st.s = 0; st.v = -st.v0; st.path = 0; st.t = 0; }
-      reset();
       var L = 6;
+      var st = { theta: 30, mu: 0.2, mass: 2, v0: 4, s: 0, v: 4, path: 0, running: true, last: 0, t: 0 };
+      // 最终约定（方案 B）：s 为「沿斜面向下」位移（s=0 右上高端，s=L 左下底端）。
+      // v>0 表示下滑；v₀ 滑块明确为「沿斜面向下」初速度，初速 = +v₀，从顶端单调下滑。
+      // 全程守恒式：Ep + Ek + Q = mgL sinθ + ½mv₀²，Q = μmgcosθ·累积路程 path（单调下滑时 path=s）。
+      function reset() { st.s = 0; st.v = st.v0; st.path = 0; st.t = 0; }
+      reset();
       function accel() {
         var th = st.theta * Math.PI / 180;
-        if (st.v < -0.002) return -G * (Math.sin(th) + st.mu * Math.cos(th));
+        // 上滑(v<0)：重力与摩擦都沿斜面向下，a = +g(sinθ+μcosθ) 使上滑减速
+        if (st.v < -0.002) return G * (Math.sin(th) + st.mu * Math.cos(th));
+        // 静止且 tanθ≤μ：静摩擦足以维持静止
         if (Math.abs(st.v) <= 0.002 && Math.tan(th) <= st.mu) return 0;
+        // 下滑(v≥0)：重力向下、摩擦向上，a = g(sinθ−μcosθ)
         return G * (Math.sin(th) - st.mu * Math.cos(th));
       }
       qa('[data-slider]').forEach(function (el) {
@@ -232,7 +238,8 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         c.save(); c.beginPath(); c.arc(g0.x0, g0.y0, 42, -th, 0); c.strokeStyle = '#D0C4E8'; c.lineWidth = 2; c.stroke(); c.restore();
         text(c, 'θ=' + st.theta + '°', g0.x0 + 48, g0.y0 - 12, '#8b6fb0', 12);
         // 滑块
-        var p = Math.max(0, Math.min(L, st.s)) / L * g0.px;
+        // s 为下滑位移：s=0 位于右上高端，s=L 位于左下低端
+        var p = (1 - Math.max(0, Math.min(L, st.s)) / L) * g0.px;
         var bx = g0.x0 + p * g0.dx, by = g0.y0 + p * g0.dy;
         c.save(); c.translate(bx, by); c.rotate(-th);
         c.fillStyle = '#FFB3BA'; c.strokeStyle = '#f28f9a'; c.lineWidth = 2;
@@ -243,11 +250,12 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         arrow(c, bx, by, bx + Math.sin(th) * st.mass * G * Math.cos(th) * sc,
           by - Math.cos(th) * st.mass * G * Math.cos(th) * sc, '#BFE3F5', 'N');
         var f = st.mu * st.mass * G * Math.cos(th);
-        var fdir = st.v < -0.002 ? 1 : -1;
+        var fdir = st.v < -0.002 ? -1 : 1;   // 上滑(v<0)摩擦沿下滑=−g0.d；下滑时沿上滑=+g0.d
         arrow(c, bx, by, bx + fdir * f * sc * g0.dx, by + fdir * f * sc * g0.dy, '#B8E8D0', 'f');
         var res = st.mass * accel();
-        if (Math.abs(res) > 0.05) arrow(c, bx, by - 26, bx + res * sc * 1.4 * g0.dx, by - 26 + res * sc * 1.4 * g0.dy, '#FFD8A8', '合力');
-        text(c, 's = ' + st.s.toFixed(2) + ' m', w - 14, 18, '#5a6472', 12, 'right');
+        // 合力正方向 = 斜面向下 = (−dx, −dy)，与下滑位移 s 的正方向一致
+        if (Math.abs(res) > 0.05) arrow(c, bx, by - 26, bx - res * sc * 1.4 * g0.dx, by - 26 - res * sc * 1.4 * g0.dy, '#FFD8A8', '合力');
+        text(c, '下滑位移 s = ' + st.s.toFixed(2) + ' m　路程 p = ' + st.path.toFixed(2) + ' m', w - 14, 18, '#5a6472', 12, 'right');
       }
       function drawChart() {
         fit(chart); var c = chart.ctx, w = chart.w, h = chart.h; if (!w || !h) return;
@@ -272,20 +280,23 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
             text(c, r[1].toFixed(1) + ' N', x1, y, '#5a6472', 11, 'right');
           });
         } else if (extIndex === 2) {
+          // 顶端向下单调滑动：横轴用累积路程 p（此处 p=s），三能量均为单值且总和恒定
           var E0 = st.mass * G * L * Math.sin(th) + 0.5 * st.mass * st.v0 * st.v0;
+          var f = st.mu * st.mass * G * Math.cos(th), pMax = L;
           function plot(fn, color) {
             c.save(); c.beginPath();
-            for (var i = 0; i <= 100; i++) {
-              var s = L * i / 100, y = bot - fn(s) / Math.max(E0, 1) * (bot - top - 10);
-              if (i === 0) c.moveTo(x0, y); else c.lineTo(x0 + i / 100 * (x1 - x0), y);
+            for (var i = 0; i <= 120; i++) {
+              var p = pMax * i / 120, y = bot - Math.max(0, fn(p)) / Math.max(E0, 1) * (bot - top - 10);
+              if (i === 0) c.moveTo(x0, y); else c.lineTo(x0 + i / 120 * (x1 - x0), y);
             }
             c.strokeStyle = color; c.lineWidth = 2.4; c.stroke(); c.restore();
           }
-          var vv = Math.sqrt(Math.max(0, st.v0 * st.v0 + 2 * G * (Math.sin(th) - st.mu * Math.cos(th)) * L));
-          plot(function (s) { return st.mass * G * (L - s) * Math.sin(th); }, '#B8E8D0');
-          plot(function (s) { return 0.5 * st.mass * (st.v0 * st.v0 + 2 * G * (Math.sin(th) - st.mu * Math.cos(th)) * s); }, '#FFD8A8');
-          plot(function (s) { return st.mass * G * L * Math.sin(th) + 0.5 * st.mass * st.v0 * st.v0 - 0.5 * st.mass * vv * vv; }, '#D0C4E8');
-          text(c, '粉：动能　绿：势能　紫：生热', x1, top + 6, '#8b95a3', 11, 'right');
+          plot(function (p) { return st.mass * G * (L - p) * Math.sin(th); }, '#B8E8D0');
+          plot(function (p) { return 0.5 * st.mass * st.v0 * st.v0 + st.mass * G * (Math.sin(th) - st.mu * Math.cos(th)) * p; }, '#FFD8A8');
+          plot(function (p) { return f * p; }, '#D0C4E8');
+          text(c, 'E / J', x0 + 3, top + 4, '#8b95a3', 10); text(c, '下滑位移 s = 路程 p / m', x1, h - 8, '#8b95a3', 11, 'right');
+          text(c, pMax.toFixed(1), x1, bot + 12, '#aab4c0', 10, 'right');
+          text(c, '粉：动能　绿：势能　紫：生热 Q=f·p（Ep+Ek+Q 恒定）', x1, top + 6, '#8b6fb0', 10, 'right');
         } else {
           text(c, 'μ', x0 + 3, top + 5, '#8b95a3', 11);
           c.save(); c.beginPath();
@@ -302,7 +313,7 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       function set(k, v) { var e = q('[data-read="' + k + '"]'); if (e) e.textContent = v; }
       function update() {
         var th = st.theta * Math.PI / 180, f = st.mu * st.mass * G * Math.cos(th);
-        var ep = st.mass * G * st.s * Math.sin(th), ek = 0.5 * st.mass * st.v * st.v;
+        var ep = st.mass * G * (L - st.s) * Math.sin(th), ek = 0.5 * st.mass * st.v * st.v;
         var heat = f * st.path, maxE = Math.max(1, st.mass * G * L * Math.sin(th) + 0.5 * st.mass * st.v0 * st.v0);
         set('a', accel().toFixed(2)); set('v', st.v.toFixed(2)); set('s', st.s.toFixed(2));
         set('f', f.toFixed(2)); set('ek', ek.toFixed(2)); set('ep', ep.toFixed(2));
@@ -319,9 +330,20 @@ input.ib-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         if (!st.last) st.last = now;
         var dt = Math.min(0.04, (now - st.last) / 1000); st.last = now;
         if (st.running) {
-          var a = accel(); st.v += a * dt; st.s += st.v * dt; st.path += Math.abs(st.v) * dt; st.t += dt;
-          if (st.s < 0) { st.s = 0; st.v = 0; }
-          if (st.s > L || (Math.abs(st.v) < 0.002 && st.s > 0.05 && a === 0)) reset();
+          // 细分子步 + 能量投影：往返全程 Ep+Ek+Q ≡ ½mv₀²（消除欧拉累积误差）
+          var nSub = Math.max(1, Math.ceil(dt / 0.002)), h = dt / nSub;
+          for (var q = 0; q < nSub; q++) {
+            var a = accel(); st.v += a * h; st.s += st.v * h; st.path += Math.abs(st.v) * h;
+            if (st.s < 0) { st.s = 0; st.v = 0; }
+            if (st.s > L) { st.path -= st.s - L; st.s = L; break; }
+            if (Math.abs(st.v) < 0.002 && a === 0) st.v = 0;
+          }
+          var th0 = st.theta * Math.PI / 180, f0 = st.mu * st.mass * G * Math.cos(th0);
+          var E0 = st.mass * G * L * Math.sin(th0) + 0.5 * st.mass * st.v0 * st.v0;
+          var ekTarget = Math.max(0, E0 - st.mass * G * (L - st.s) * Math.sin(th0) - f0 * st.path);
+          st.v = (st.v < 0 ? -1 : 1) * Math.sqrt(2 * ekTarget / st.mass);
+          if (st.s >= L - 1e-9 && st.v > 0) reset();   // 回到低端完成一次往返
+          st.t += dt;
         }
         drawStage(); drawChart(); update(); raf = global.requestAnimationFrame(loop);
       }
