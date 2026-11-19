@@ -287,7 +287,7 @@
   function viewGraph(ctx) {
     var d = ctx.doc, on = ctx.on, fit = ctx.fit, win = ctx.win;
     var st = { n: 1.5, T: 300, V: 5, mode: 'iso' };
-    var pMax = 2000;   // 固定压强量程，覆盖 n=3、T=900、V=1 的极端值，避免状态点贴顶饱和
+    var pMax = 3000;   // 固定压强量程，覆盖 n=3、T=900、V=1 的极端值 p=3×900/1=2700，避免状态点贴顶饱和
     var nRef = st.n;   // 变化前的物质的量（灰虚线参考）
     ctx.container.innerHTML =
       '<div class="ig-wrap">' +
@@ -540,8 +540,9 @@
         }
         c.strokeStyle = cvv.col; c.lineWidth = cvv.T === st.T ? 4 : 2; c.stroke();
       });
-      // 当前 T 的平均值标记
-      var vm = 1.13 * Math.sqrt(st.T / 300);
+      // 当前 T 的平均值标记：分布峰值位于 vp=0.9√(T/300)（最概然速率），
+      // 麦克斯韦分布平均速率 v̄=(2/√π)·vp≈1.128vp≈1.02√(T/300)，而非 1.13√。
+      var vm = 2 / Math.sqrt(Math.PI) * (0.9 * Math.sqrt(st.T / 300));
       c.strokeStyle = '#c1616c'; c.setLineDash([5, 4]); c.lineWidth = 2;
       c.beginPath(); c.moveTo(X(vm), Tp); c.lineTo(X(vm), B); c.stroke(); c.setLineDash([]);
       c.fillStyle = '#c1616c'; c.font = 'bold 13px sans-serif';
