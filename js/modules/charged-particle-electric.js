@@ -29,7 +29,7 @@
 
   // 四个子标签的主区专属数据图
   var CHART_TITLE = ['轨迹对比图 · 有 / 无电场', '偏转量 y 随参数的变化曲线', '能量随水平位置 x 的转化图', '偏移几何分解 · 屏上总偏移 Y'];
-  var CHART_HINT = ['深色实线为当前轨迹，灰虚线为无电场时的直线', '扫 E / q 为直线，扫 v₀ 为双曲线，当前参数用圆点标出', 'Ekx 恒定、Eky 与 W 同步增长，二者始终相等', 'y 为板内偏移，屏上 Y = y + vᵧ·D/v₀'];
+  var CHART_HINT = ['深色实线为当前轨迹，灰虚线为无电场时的直线', '扫 E / q 为直线，扫 v₀ 为双曲线，当前参数用圆点标出', 'Ekx 恒定、Eky 与 W 同步增长，二者始终相等（本图按偏转电场模型计算）', 'y 为板内偏移，屏上 Y = y + vᵧ·D/v₀'];
   var CIRCLE = Math.PI * 2;
 
   var STYLE_ID = 'ml-cpe-style';
@@ -135,7 +135,7 @@
     var dEk = 0.5 * m * (vOut * vOut - v0 * v0);
     var yScreen = yL + vyL * (DR / v0);
     var hit = Math.abs(yL) > GAP / 2;
-    var xHit = hit ? v0 * Math.sqrt((GAP / 2) / Math.abs(a)) : PL;
+    var xHit = hit ? v0 * Math.sqrt(GAP / Math.abs(a)) : PL;
     var U = E * GAP;
     var disc = v0 * v0 + 2 * a * GAP;
     return {
@@ -182,7 +182,7 @@
         + '<div class="cpe-rel">'
         + '<div><span>y ∝ qE / (m v₀²)</span><b data-rel="base">—</b></div>'
         + '<div><span>tanθ = vᵧ / v₀ = qEL / (m v₀²)</span><b data-rel="tan">—</b></div>'
-        + '<div><span>屏上总偏移 Y = y(1 + 2d/L)</span><b data-rel="screen">—</b></div>'
+        + '<div><span>屏上总偏移 Y = y(1 + 2D/L)</span><b data-rel="screen">—</b></div>'
         + '</div></div>'
         + '<div class="cpe-card"><div class="cpe-card__t"><i style="background:var(--lav,#D0C4E8)"></i>控制变量结论</div>'
         + '<div class="cpe-formula">'
@@ -675,7 +675,7 @@
       function updateReadouts(d, cur) {
         // 读数按模式切换：偏转模型无加速电压，加速模型无侧移/偏转角
         var accelMode = d.mode === 'accel';
-        ['t', 'y', 'tan', 'w'].forEach(function (k) { setReadVisible(k, !accelMode); });
+        ['t', 'y', 'tan', 'w', 'v'].forEach(function (k) { setReadVisible(k, !accelMode); });
         ['U', 'vacc'].forEach(function (k) { setReadVisible(k, accelMode); });
         setRead('a', nf(d.a) + '');
         setRead('t', nf(d.tL * 1000));
@@ -712,7 +712,7 @@
         }
         if (idx === 3) {
           var set = function (k, v) { var e = q1('[data-a="' + k + '"]'); if (e) e.textContent = v; };
-          set('t', nf(d.tL * 1000)); set('y', nf(d.yL * 1000));
+          set('t', d.tL.toFixed(3)); set('y', nf(d.yL * 1000));
           set('tan', nf(d.tan)); set('Y', nf(d.yScreen * 1000));
         }
       }
