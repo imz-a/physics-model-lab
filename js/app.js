@@ -233,11 +233,237 @@
         renderPlaceholder(m);
         console.error('[ModelLab] 模块渲染失败：' + m.id, err);
       }
+      try { postProcessFolds(); } catch (err) { console.warn('[ModelLab] 内容折叠后处理跳过', err); }
       return;
     }
 
     els.panel.classList.remove('is-live');
     renderPlaceholder(m);
+
+    // 通用后处理对所有模块一视同仁；失败绝不阻断主流程
+    try { postProcessFolds(); } catch (err) { console.warn('[ModelLab] 内容折叠后处理跳过', err); }
+  }
+
+  /* ============================================================
+   * 触控增强：框架 JS 在渲染后注入一次全局 <style>。
+   * 模块自带 <style> 位于 #panel 内，按其原样加载；这里用 #panel 前缀
+   * 提升特异性，确保按钮/滑块的触控热区覆盖模块原样式。
+   * 选择器只命中 button / [role=button] / 常见按钮属性 / range，
+   * 不含 canvas、svg，故不会误伤画布元素。
+   * ============================================================ */
+  var TOUCH_STYLE = `<style id="ml-touch-enhance">
+#panel button,
+#panel [role="button"],
+#panel summary,
+#panel [data-act],
+#panel [data-btn],
+#panel [data-opt],
+#panel [data-seg],
+#panel [data-q],
+#panel [data-qo],
+#panel [data-qs],
+#panel [data-qt],
+#panel [data-qp],
+#panel [data-o],
+#panel [class*="btn"],
+#panel [class*="opt"],
+#panel [class*="seg"] {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
+  touch-action: manipulation;
+}
+#panel button:active,
+#panel [role="button"]:active,
+#panel [class*="btn"]:active,
+#panel [class*="opt"]:active,
+#panel [data-act]:active { transform: translateY(1px); }
+#panel input[type="range"] {
+  height: 30px;
+  touch-action: manipulation;
+}
+#panel input[type="range"]::-webkit-slider-thumb {
+  width: 20px !important;
+  height: 20px !important;
+  margin-top: -7px !important;
+}
+#panel input[type="range"]::-moz-range-thumb {
+  width: 20px !important;
+  height: 20px !important;
+}
+</style>`;
+
+  function ensureTouchStyle() {
+    if (doc.getElementById('ml-touch-enhance')) return;
+    var box = doc.createElement('div');
+    box.innerHTML = TOUCH_STYLE;
+    if (box.firstChild) (doc.head || doc.documentElement).appendChild(box.firstChild);
+  }
+
+  /* ============================================================
+   * 内容折叠：通用、宽松、保守的框架层后处理。
+   * 原则：
+   *  1) 只对 #panel 内“卡片级”块包裹原生 <details>，不重建 innerHTML、不把
+   *     元素移出 #panel —— 模块 render 时绑定的事件与持有的 DOM 引用全部保留。
+   *  2) 含 canvas / svg / range / [data-cv] / [data-slider] / [data-read] 的块
+   *     一律不折叠：主画布、控制滑块、核心读数始终在首屏。
+   *  3) 仅折叠命中考题 / 解析 / 实验 / 公式信号的块，宁可少折叠也不错折叠。
+   * ============================================================ */
+  var PRIMARY_SEL = 'canvas, svg, input[type="range"], [data-cv], [data-slider], [data-read]';
+  var TITLE_SEL = 'h3, h4, h5, [class*="__t"], [class*="__title"], [class*="-hd"], [class*="-head"], [class*="-title"]';
+  var BLOCK_SEL = 'div[class], section[class], article[class]';
+  var RE_BLOCKISH = /(card|box|acc|exam|quiz|extra|detail|section|blk|block|tile|opts|note|formula|table|题)/i;
+  var RE_QUIZ = /(题型|随堂|题目|选择|判断|作答|选项|解析|辨析|第\s*\d+\s*题)/;
+  var RE_EXP = /(拓展|实验|数据|表格|分析|推导|说明|结论|视角|规律|核心|提示)/;
+
+  function textOf(el) {
+    return (el && el.textContent ? el.textContent : '').replace(/\s+/g, ' ').trim();
+  }
+
+  // 取块自身的标题：直接子标题优先；标题若包在 header 行内则取该行文本
+  function titleOf(block) {
+    var kids = block.children;
+    for (var i = 0; i < kids.length; i++) {
+      var c = kids[i];
+      if (c.matches && c.matches(TITLE_SEL)) return textOf(c);
+      if (c.querySelector && c.querySelectorAll(TITLE_SEL).length <= 2) {
+        var t = c.querySelector(TITLE_SEL);
+        if (t) return textOf(c);
+      }
+    }
+    return '';
+  }
+
+  function depthOf(el) {
+    var d = 0, p = el;
+    while (p && p !== els.panel) { d++; p = p.parentElement; }
+    return d;
+  }
+
+  // 核心读数卡硬保护：标题 / 类名 / 内部读数节点命中即永不折叠
+  function isReadoutBlock(block, title) {
+    if (/(读数|实时|measure|meter|\bread\b)/i.test(title || '')) return true;
+    if (/(read|readout|meter|meas|实时)/i.test(block.className || '')) return true;
+    if (block.querySelector('[data-read],[class*="read"],[class*="meter"],[class*="meas"]')) return true;
+    return false;
+  }
+
+  // 折叠后可见文本长度：innerText 天然排除 <details> 收起时的内容
+  function visibleTextLen() {
+    return (els.panel.innerText || '').replace(/\s+/g, '').length;
+  }
+
+  // 返回折叠标签；空字符串表示不折叠
+  function classifyBlock(block, title) {
+    var cls = block.className || '';
+    if (isReadoutBlock(block, title)) return ''; // 双重保险：核心读数绝不进入任何折叠分支
+    var hasQuiz = block.querySelector('[data-q],[data-qex],[data-qfb],[data-qexp],[data-qp],[data-qs],[data-qt],[data-qo],[data-fb],[data-ans],[data-opt],[data-o]');
+    var hasTable = !!block.querySelector('table');
+    var hasExp = block.querySelector('[data-exp],[data-expbody],[data-expres],[data-a]');
+    // 收窄 formula：不能因为卡内嵌一个公式条就折掉整张核心卡；
+    // 必须标题 / 类名本身是公式或推导主题，且无读数节点。
+    var hasFormula = !!block.querySelector('[class*="formula"],[class*="derive"]')
+      && (/(公式|推导|演算)/.test(title || '') || /(formula|derive)/i.test(cls));
+    var hasRich = block.querySelector('[class*="note"],[class*="exp"],[class*="table"],[class*="ans"],[class*="sol"],[class*="parse"],[class*="tip"]');
+    if (hasQuiz || RE_QUIZ.test(title) || /(quiz|exam|opt|ans|题)/i.test(cls)) return '题目与解析';
+    if (hasTable || hasExp) return '实验与数据';
+    if (hasFormula) return '公式与推导';
+    if (hasRich || RE_EXP.test(title) || /(exp|table|formula|note)/i.test(cls)) return '讲解与拓展';
+    return '';
+  }
+
+  function updateFoldAllBtn() {
+    if (!els.panelToolbar || !els.foldAllBtn) return;
+    var folds = els.panel.querySelectorAll('details.ml-fold');
+    var n = folds.length;
+    if (!n) { els.panelToolbar.hidden = true; return; }
+    els.panelToolbar.hidden = false;
+    var anyClosed = false;
+    for (var i = 0; i < n; i++) {
+      if (!folds[i].open) { anyClosed = true; break; }
+    }
+    els.foldAllBtn.textContent = anyClosed ? '全部展开' : '全部收起';
+    if (els.foldHint) els.foldHint.textContent = '已折叠 ' + n + ' 处次要内容 · 点标题展开';
+  }
+
+  function wrapFold(block, label, title) {
+    var details = doc.createElement('details');
+    details.className = 'ml-fold';
+
+    var summary = doc.createElement('summary');
+    summary.className = 'ml-fold__summary';
+    var mark = doc.createElement('span');
+    mark.className = 'ml-fold__mark';
+    mark.setAttribute('aria-hidden', 'true');
+    mark.textContent = '▸';
+    var lab = doc.createElement('span');
+    lab.className = 'ml-fold__label';
+    lab.textContent = label;
+    var ttl = doc.createElement('span');
+    ttl.className = 'ml-fold__title';
+    ttl.textContent = title || '点击展开查看';
+    summary.appendChild(mark);
+    summary.appendChild(lab);
+    summary.appendChild(ttl);
+
+    var body = doc.createElement('div');
+    body.className = 'ml-fold__body';
+    details.appendChild(summary);
+    details.appendChild(body);
+
+    block.parentNode.insertBefore(details, block);
+    body.appendChild(block); // 原地包裹，元素仍是 #panel 后代，事件与引用保留
+
+    details.addEventListener('toggle', function () {
+      // 兜底：展开后通知模块重绘（模块普遍监听 resize 重算画布尺寸）
+      if (details.open) global.dispatchEvent(new Event('resize'));
+      updateFoldAllBtn();
+    });
+    return details;
+  }
+
+  function postProcessFolds() {
+    var panel = els.panel;
+    var blocks = panel.querySelectorAll(BLOCK_SEL);
+    // 纯概念页（无画布 / 滑块 / 按钮）：一屏可读，折叠只会藏起核心讲解，
+    // 仅允许折叠标题明确是题目 / 高考 / 题型 / 实验拓展的块。
+    var interactive = !!panel.querySelector('canvas, input[type="range"], button, [role="button"]');
+    var baseline = visibleTextLen();
+    var list = [];
+
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      if (!b.parentNode) continue;
+      if (b.closest && b.closest('.ml-fold')) continue; // 已在折叠内部
+      if (b.querySelector('.ml-fold')) continue;        // 内部已有折叠，跳过外层
+      if (b.querySelector(PRIMARY_SEL)) continue;       // 核心画布/滑块/读数，绝不折叠
+
+      var title = titleOf(b);
+      if (isReadoutBlock(b, title)) continue;           // 核心读数卡，绝不折叠
+      var label = classifyBlock(b, title);
+      if (!label || textOf(b).length < 24) continue;
+      if (!interactive && !/(题目|高考|题型|随堂|实验拓展|实验)/.test(title + ' ' + label)) continue;
+      list.push({ el: b, depth: depthOf(b), label: label, title: title });
+    }
+
+    // 先折深层块，避免父块把已折叠的子块重复包裹
+    list.sort(function (a, b) { return b.depth - a.depth; });
+    for (var j = 0; j < list.length; j++) {
+      var it = list[j];
+      if (!it.el.parentNode || it.el.querySelector('.ml-fold') || it.el.querySelector(PRIMARY_SEL)) continue;
+      if (baseline < 120) break; // 基线可见文本已不足 120 字，一律不折
+
+      var details = wrapFold(it.el, it.label, it.title);
+      // 通用硬护栏：折叠后可见文本不得低于 120 字，否则原样还原
+      if (visibleTextLen() < 120) {
+        var host = details.parentNode;
+        if (host) {
+          host.insertBefore(it.el, details);
+          host.removeChild(details);
+        }
+      }
+    }
+    updateFoldAllBtn();
   }
 
   /* ---------------- 动作 ---------------- */
@@ -332,6 +558,19 @@
       else openDrawer();
     });
     els.overlay.addEventListener('click', closeDrawer);
+
+    // 折叠工具条：一键展开 / 收起全部折叠块
+    if (els.foldAllBtn) els.foldAllBtn.addEventListener('click', function () {
+      var folds = els.panel.querySelectorAll('details.ml-fold');
+      if (!folds.length) return;
+      var anyClosed = false;
+      for (var i = 0; i < folds.length; i++) {
+        if (!folds[i].open) { anyClosed = true; break; }
+      }
+      for (var k = 0; k < folds.length; k++) folds[k].open = anyClosed;
+      updateFoldAllBtn();
+    });
+
     doc.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') closeDrawer();
     });
@@ -357,9 +596,14 @@
       mainInner: byId('mainInner'),
       modelHeader: byId('modelHeader'),
       subTabs: byId('subTabs'),
+      panelToolbar: byId('panelToolbar'),
+      foldHint: byId('foldHint'),
+      foldAllBtn: byId('foldAllBtn'),
       panel: byId('panel'),
       overlay: byId('drawerOverlay')
     };
+
+    ensureTouchStyle();
 
     var route = parseHash();
     if (route) {
