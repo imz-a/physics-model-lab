@@ -115,7 +115,10 @@ input.co-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       if(diff>fr)a2=(diff-fr)/(st.m1+st.m2);
       else if(diff<-fr)a2=(diff+fr)/(st.m1+st.m2);
       else a2=0;
-      return {a:a2,T:st.m2*G-st.m2*a2,f1:st.mu*st.m1*G*Math.cos(TH),f2:0,drive:diff,crit:fr};
+      // 静止时静摩擦恰好平衡重力差与绳拉力之差（|diff|，可为零）；
+      // 只有真正滑动时才取滑动摩擦 μm₁gcosθ。
+      var f1=Math.abs(diff)<=fr?Math.abs(diff):fr;
+      return {a:a2,T:st.m2*G-st.m2*a2,f1:f1,f2:0,drive:diff,crit:fr};
     }
     function reset(){st.s=0;st.v=0;st.t=0;}
     // 「变化前」基准曲线（μ 改变前），灰色虚线保留作对照
