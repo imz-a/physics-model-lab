@@ -287,7 +287,8 @@
   function viewGraph(ctx) {
     var d = ctx.doc, on = ctx.on, fit = ctx.fit, win = ctx.win;
     var st = { n: 1.5, T: 300, V: 5, mode: 'iso' };
-    var pMax = 180;
+    var pMax = 2000;   // 固定压强量程，覆盖 n=3、T=900、V=1 的极端值，避免状态点贴顶饱和
+    var nRef = st.n;   // 变化前的物质的量（灰虚线参考）
     ctx.container.innerHTML =
       '<div class="ig-wrap">' +
         '<div class="ig-lead"><p>拖动 <b>p–V 图</b>上的状态点 A，切换等温 / 等压 / 等容过程，观察状态如何沿过程线移动；右下方 p–T 图同步显示等容线。</p>' +
@@ -345,7 +346,7 @@
       // 网格
       c.strokeStyle = '#eef2f6'; c.lineWidth = 1;
       for (var v = 1; v <= 10; v++) { c.beginPath(); c.moveTo(X(v), 18); c.lineTo(X(v), h - 42); c.stroke(); }
-      for (var p = 0; p <= pMax; p += 30) { c.beginPath(); c.moveTo(52, Y(p)); c.lineTo(w - 26, Y(p)); c.stroke(); }
+      for (var p = 0; p <= pMax; p += 250) { c.beginPath(); c.moveTo(52, Y(p)); c.lineTo(w - 26, Y(p)); c.stroke(); }
       // 等温参考线族
       c.strokeStyle = '#f3e3cf'; c.lineWidth = 1.5;
       [200, 300, 450, 600].forEach(function (T) {
@@ -374,8 +375,9 @@
       c.strokeStyle = '#9aa6b4'; c.lineWidth = 1.5;
       c.beginPath(); c.moveTo(52, 18); c.lineTo(52, h - 42); c.lineTo(w - 20, h - 42); c.stroke();
       c.fillStyle = '#8b95a3'; c.font = '13px sans-serif';
-      c.fillText('p', 34, 24); c.fillText('V', w - 18, h - 24);
+      c.fillText('p / (相对单位)', 8, 14); c.fillText('V / L', w - 40, h - 24);
       for (var vv2 = 2; vv2 <= 10; vv2 += 2) c.fillText(String(vv2), X(vv2) - 4, h - 24);
+      for (var pvTick = 0; pvTick <= pMax; pvTick += 500) c.fillText(String(pvTick), 10, Y(pvTick) + 4);
       // 状态点
       var ax = X(st.V), ay = Y(pressure(st.V, st.T));
       c.beginPath(); c.arc(ax, ay, 12, 0, Math.PI * 2); c.fillStyle = 'rgba(255,179,186,.45)'; c.fill();
@@ -391,15 +393,29 @@
       c.strokeStyle = '#eef2f6';
       for (var T = 0; T <= 600; T += 100) { c.beginPath(); c.moveTo(X2(T), 18); c.lineTo(X2(T), h - 42); c.stroke(); }
       for (var pp = 0; pp <= pTop; pp += 20) { c.beginPath(); c.moveTo(52, Y2(pp)); c.lineTo(w - 26, Y2(pp)); c.stroke(); }
-      c.strokeStyle = '#d5c7e6'; c.lineWidth = 2;
-      [2, 4, 6, 8].forEach(function (V) {
-        c.beginPath(); c.moveTo(X2(0), Y2(0)); c.lineTo(X2(600), Y2(st.n * 600 / V)); c.stroke();
-      });
+      // 等容线 p=nT/V：按 T 逐点绘制，到达 pTop 后水平延伸（真实形状，不是终点 clamp 的斜线）
+      function isoLine(V, n, color, width, dash) {
+        var tTop = pTop * V / n;
+        c.save(); c.strokeStyle = color; c.lineWidth = width;
+        if (dash) c.setLineDash(dash);
+        c.beginPath(); c.moveTo(X2(0), Y2(0));
+        var tEnd = Math.min(tMax, tTop);
+        for (var tt = 4; tt <= tEnd; tt += 4) c.lineTo(X2(tt), Y2(n * tt / V));
+        c.lineTo(X2(tEnd), Y2(n * tEnd / V));
+        if (tTop < tMax) { c.lineTo(X2(tTop), Y2(pTop)); c.lineTo(X2(tMax), Y2(pTop)); }
+        c.stroke(); c.restore();
+      }
+      if (Math.abs(nRef - st.n) > 1e-9) isoLine(4, nRef, '#aeb8c6', 2, [6, 5]); // 变化前参考
+      [2, 4, 6, 8].forEach(function (V) { isoLine(V, st.n, '#d5c7e6', 2, null); });
+      c.save(); c.fillStyle = '#aeb8c6'; c.font = '12px sans-serif';
+      c.fillText('灰虚线：变化前 n=' + fmt(nRef, 1), 56, 30); c.restore();
       c.strokeStyle = '#9aa6b4'; c.lineWidth = 1.5;
       c.beginPath(); c.moveTo(52, 18); c.lineTo(52, h - 42); c.lineTo(w - 20, h - 42); c.stroke();
       c.fillStyle = '#8b95a3'; c.font = '13px sans-serif';
-      c.fillText('p', 34, 24); c.fillText('T/K', w - 44, h - 24);
+      c.fillText('p / (相对单位)', 4, 14); c.fillText('T / K', w - 48, h - 24);
       for (var T2 = 100; T2 <= 600; T2 += 200) c.fillText(String(T2), X2(T2) - 8, h - 24);
+      for (var ptTick = 0; ptTick <= pTop; ptTick += 40) c.fillText(String(ptTick), 12, Y2(ptTick) + 4);
+      c.save(); c.fillStyle = '#8b95a3'; c.font = '12px sans-serif'; c.fillText('淡紫：等容线 V=2/4/6/8 L', 56, 46); c.restore();
       var cxp = X2(st.T), cyp = Y2(pressure(st.V, st.T));
       c.beginPath(); c.arc(cxp, cyp, 12, 0, Math.PI * 2); c.fillStyle = 'rgba(208,196,232,.45)'; c.fill();
       c.beginPath(); c.arc(cxp, cyp, 6, 0, Math.PI * 2); c.fillStyle = '#9b86c4'; c.fill();
@@ -436,9 +452,9 @@
         updateLabels();
       });
     });
-    on($('[data-key="n"]'), 'input', function () { st.n = parseFloat(this.value); updateLabels(); });
+    on($('[data-key="n"]'), 'input', function () { nRef = st.n; st.n = parseFloat(this.value); updateLabels(); });
     on($('[data-act="reset"]'), 'click', function () {
-      st.n = 1.5; st.T = 300; st.V = 5; playing = false;
+      st.n = 1.5; st.T = 300; st.V = 5; playing = false; nRef = 1.5;
       ctx.container.querySelector('[data-key="n"]').value = 1.5;
       updateLabels();
     });
@@ -573,7 +589,7 @@
       '<div class="ig-wrap">' +
         '<div class="ig-lead"><p>两道典型题，点击选项即时判定并查看解析。第 1 题可调体积直观看到压强变化。</p></div>' +
         '<div class="ig-q">' +
-          '<div class="ig-q__t">1．（等温变化）一定质量的理想气体温度保持不变，体积由 2 L 压缩到 1 L，压强将如何变化？</div>' +
+          '<div class="ig-q__t" data-qt="1">1．（等温变化）一定质量的理想气体温度保持不变，体积由 2.0 L 变为 1.0 L，压强将如何变化？</div>' +
           '<div class="ig-bar" style="box-shadow:none;border:0;padding:12px 0">' +
             '<div class="ig-ctrl" style="flex:1 1 260px"><div class="ig-ctrl__top"><label>末体积 V₂</label><span class="ig-ctrl__val" data-val="v2">1.0<em>L</em></span></div>' +
             '<input class="ig-range" type="range" data-key="v2" min="0.5" max="4" step="0.1" value="1" aria-label="末体积"></div>' +
@@ -598,14 +614,39 @@
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var exp = {
-      '1': { right: 'B', text: '等温过程满足 p₁V₁ = p₂V₂，即 p₂/p₁ = V₁/V₂。体积减半则压强加倍。拖动滑块可见 V₂ 越小、压强比越大。' },
+      '1': { right: 'B', text: '' },
       '2': { right: 'B', text: 'p–V 图中纵轴是压强 p。水平线意味着 p 不随 V 变化，即压强恒定，是等压过程（此时 V ∝ T）。' }
     };
     var v2Input = $('[data-key="v2"]');
+    function optText(x) {
+      if (Math.abs(x - 1) < 0.02) return '保持不变';
+      if (Math.abs(x - 0.5) < 0.02) return '变为原来的一半';
+      return '变为原来的 ' + fmt(x, 2) + ' 倍';
+    }
     function updateRatio() {
-      var v2 = parseFloat(v2Input.value);
+      var v2 = parseFloat(v2Input.value), ratio = 2 / v2;
       $('[data-val="v2"]').innerHTML = fmt(v2, 1) + '<em>L</em>';
-      $('[data-ratio]').textContent = fmt(2 / v2, 1);
+      $('[data-ratio]').textContent = fmt(ratio, 2);
+      $('[data-qt="1"]').textContent = '1．（等温变化）一定质量的理想气体温度保持不变，体积由 2.0 L 变为 '
+        + fmt(v2, 1) + ' L，压强将如何变化？';
+      // 选项与正确答案随 V₂ 实时生成（含去重，滑块 0.5~4 L 全程可判）
+      var cand = [ratio], extra = [ratio / 2, ratio * 2, 1, ratio * 4, ratio / 4, 0.5, 2, 3];
+      function pushUnique(v) {
+        for (var z = 0; z < cand.length; z++) if (Math.abs(cand[z] - v) < 0.02) return;
+        if (cand.length < 4) cand.push(v);
+      }
+      for (var i = 0; i < extra.length && cand.length < 4; i++) pushUnique(extra[i]);
+      var off = Math.round(v2 * 10) % 4, letters = ['A', 'B', 'C', 'D'];
+      for (var k = 0; k < 4; k++) {
+        var val = cand[(k + off) % 4];
+        $('[data-q="1"] [data-ans="' + letters[k] + '"]').textContent = letters[k] + '．' + optText(val);
+        if (Math.abs(val - ratio) < 0.02) exp['1'].right = letters[k];
+      }
+      exp['1'].text = '等温过程 p₁V₁ = p₂V₂，故 p₂/p₁ = V₁/V₂ = 2/' + fmt(v2, 1)
+        + ' = ' + fmt(ratio, 2) + '，应选 ' + exp['1'].right + '。V₂ 越小，压强比越大。';
+      var box = $('[data-q="1"]');
+      Array.prototype.forEach.call(box.querySelectorAll('.ig-opt'), function (x) { x.classList.remove('is-right', 'is-wrong'); });
+      $('[data-exp="1"]').hidden = true;
     }
     on(v2Input, 'input', updateRatio); updateRatio();
     Array.prototype.forEach.call(ctx.container.querySelectorAll('[data-q]'), function (box) {
