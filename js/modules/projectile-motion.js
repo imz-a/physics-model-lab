@@ -225,7 +225,7 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         if (state.field === 'electric') return aElectric();
         return aGravity() + aElectric();
       }
-      function Tf() { return Math.sqrt(2 * state.h / Math.max(0.1, accel())); }
+      function Tf() { return Math.sqrt(2 * state.h / Math.max(1e-9, accel())); }
       function range() { return state.v0 * Tf(); }
       function relaunch() { state.t = 0; state.hold = 0; state.running = true; var b = q1('[data-btn="toggle"]'); if (b) b.textContent = '暂停'; }
 
@@ -349,7 +349,7 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
             { a: aElectric(), color: '#B8E8D0', dash: [5, 4], label: '仅电场' }
           ];
           modes.forEach(function (m) {
-            var ttf = Math.sqrt(2 * state.h / Math.max(0.1, m.a));
+            var ttf = Math.sqrt(2 * state.h / Math.max(1e-9, m.a));
             c.save(); c.beginPath();
             for (var p3 = 0; p3 <= 100; p3++) {
               var t3 = p3 / 100 * ttf;
@@ -499,7 +499,7 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
           text(c, String(ym), x0 - 6, Yg, '#aab4c0', 10, 'right');
         }
         modes.forEach(function (m) {
-          var R = state.v0 * Math.sqrt(2 * state.h / Math.max(0.1, m.a));
+          var R = state.v0 * Math.sqrt(2 * state.h / Math.max(1e-9, m.a));
           c.save(); c.beginPath();
           for (var p = 0; p <= 100; p++) {
             var px = p / 100 * R, py = m.a * px * px / (2 * state.v0 * state.v0);
