@@ -331,7 +331,7 @@
           '<section class="ms-card"><h4>底片上的同位素谱线</h4><div class="ms-card__hint">横轴为绝对落点半径 r/cm；柱高示意丰度，位置由 r 决定；灰虚线为变化前落点。改 U/B/z 谱线整体平移</div>' +
             '<canvas id="msFilm" class="ms-cv" style="height:300px" aria-label="质谱图"></canvas></section>' +
         '</div>' +
-        '<div class="ms-note"><b>读图要点：</b>谱线间距随质量数增大而变小（r ∝ √A，曲线越来越平缓）；但 r ∝ √(m/q)，决定落点的是<b>比荷 q/m</b>——只有比荷相同的离子才落在同一位置（如 A=12,z=1 与 A=24,z=2 的 q/m 相同），此时质谱仪无法区分，需结合其它信息判断。质量数相同而电荷数不同时 r 相差 √z 倍，落点明显分开。</div>' +
+        '<div class="ms-note"><b>读图要点：</b>谱线间距随质量数增大而变小（r ∝ √A，曲线越来越平缓）；但 r ∝ √(m/q)，决定落点的是<b>比荷 q/m</b>——只有比荷相同的离子才落在同一位置（如 A=12,z=1 与 A=24,z=2 的 q/m 相同），此时质谱仪无法区分，需结合其它信息判断。质量数相同而电荷数不同时 r 与 √z 成反比（r ∝ 1/√z，z 越大半径越小），落点明显分开。</div>' +
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var curveLay = fit($('#msCurve'), 300), filmLay = fit($('#msFilm'), 300);
