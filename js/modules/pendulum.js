@@ -227,6 +227,20 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         return Tsmall() / agm(1, b);
       }
       function omega0() { return Math.sqrt(state.g / state.L); }
+      // 显示的周期须与动画/曲线同源：小角度用 T=2π√(L/g)，大角度用精确周期 AGM
+      function Tdisplay() { return state.mode === 'small' ? Tsmall() : Texact(); }
+      function tipText() {
+        if (state.mode === 'large') return '大角度下摆动不再是简谐运动：周期变长，可用 T = 2π√(L/g)/AGM(1,cos(θ₀/2)) 精确求得；动画采用 RK4 数值积分。';
+        if (state.theta0 > 15) return '注意：θ₀=' + state.theta0 + '° 已超出小角度近似范围（>15°），此处按 T=2π√(L/g) 显示的周期与真实周期偏差增大，建议切换到「大角度对比」模型。';
+        return 'ω = √(g/L)；小角度下 T 与摆球质量、振幅均无关。';
+      }
+      function refreshTip() {
+        var tip = q1('[data-tip]');
+        if (!tip) return;
+        tip.className = 'pd-tip' + (state.mode === 'large' ? ' warn' : '');
+        var txt = tipText();
+        if (tip.textContent !== txt) tip.textContent = txt;
+      }
       function resetMotion() {
         state.phase = 0;
         state.th = thetaRad0();
@@ -294,13 +308,7 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
           state.mode = el.getAttribute('data-mode');
           qa('[data-mode]').forEach(function (b) { b.classList.toggle('on', b === el); });
           resetMotion();
-          var tip = q1('[data-tip]');
-          if (tip) {
-            tip.className = 'pd-tip' + (state.mode === 'large' ? ' warn' : '');
-            tip.textContent = state.mode === 'large'
-              ? '大角度下摆动不再是简谐运动：周期变长，可用 T = 2π√(L/g)/AGM(1,cos(θ₀/2)) 精确求得；动画采用 RK4 数值积分。'
-              : 'ω = √(g/L)；小角度下 T 与摆球质量、振幅均无关。';
-          }
+          refreshTip();
         });
       });
 
@@ -441,6 +449,16 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         state.L = svL; state.g = svg; state.th = svth; state.wv = svw;
         return out;
       }
+      // 与 θ–t 图同源的 RK4 预计算：同时返回 θ 与角速度，供能量图逐点代入 Ep、Ek
+      function rk4CurveEV(L, g, theta0, tMax, n) {
+        var svL = state.L, svg = state.g, svth = state.th, svw = state.wv;
+        state.L = L; state.g = g; state.th = theta0 * Math.PI / 180; state.wv = 0;
+        var h = tMax / n, ths = new Array(n + 1), wvs = new Array(n + 1);
+        ths[0] = state.th; wvs[0] = state.wv;
+        for (var i = 1; i <= n; i++) { rk4(h); ths[i] = state.th; wvs[i] = state.wv; }
+        state.L = svL; state.g = svg; state.th = svth; state.wv = svw;
+        return { th: ths, wv: wvs };
+      }
       function drawThetaChart() {
         fit(chart);
         var c = chart.ctx, w = chart.w, h = chart.h;
@@ -454,7 +472,7 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         text(c, 'θ / (°)', pad.l + 2, pad.t + 4, '#8b95a3', 11);
         text(c, 't / s', w - pad.r, h - 6, '#8b95a3', 11, 'right');
         text(c, '0', pad.l - 8, mid, '#8b95a3', 11, 'right');
-        var T = Texact(), x0 = pad.l, x1 = w - pad.r;
+        var T = Tdisplay(), x0 = pad.l, x1 = w - pad.r;
         var tMax = 12, N = 600;                       // 固定时间窗、固定纵轴量程（θ₀max=60°）
         var ys = (mid - pad.t - 6) / (Math.PI / 3);
         text(c, '+60°', pad.l - 8, pad.t + 6, '#8b95a3', 10, 'right');
@@ -533,19 +551,28 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         if (!w || !h) return;
         c.clearRect(0, 0, w, h);
         var pad = { l: 38, r: 14, t: 14, b: 22 };
-        var T = Texact(), top = pad.t + 6, bot = h - pad.b, x0 = pad.l, x1 = w - pad.r;
+        var T = Tdisplay(), top = pad.t + 6, bot = h - pad.b, x0 = pad.l, x1 = w - pad.r;
         var etot = state.mass * state.g * state.L * (1 - Math.cos(thetaRad0()));
         var maxE = Math.max(etot, 0.001);
+        var span = T * 2, N = 600;
+        // 用与 θ–t 图同源的 RK4 数值解逐点取 θ、v：简谐解代入非线性势能会使 Ek 峰值越过总能量线
+        // （θ₀=60° 时 ½θ₀²mgL≈0.548mgL > mgL(1−cos60°)=0.5mgL）。数值解保证任意摆角下 Ep+Ek 守恒。
+        var samples = rk4CurveEV(state.L, state.g, state.theta0, span, N);
         text(c, 'E/J', pad.l + 2, pad.t + 4, '#8b95a3', 11);
         text(c, 't/s', w - pad.r, h - 6, '#8b95a3', 11, 'right');
         line(c, x0, bot, x1, bot, '#cbd6e2', 1);
+        function stateAt(tt) {
+          var u = Math.max(0, Math.min(N, tt / span * N)), i = Math.floor(u), f = u - i;
+          var th = samples.th[i] + (samples.th[Math.min(N, i + 1)] - samples.th[i]) * f;
+          var wv = samples.wv[i] + (samples.wv[Math.min(N, i + 1)] - samples.wv[i]) * f;
+          return { th: th, v: Math.abs(state.L * wv) };
+        }
         function plot(fn, color) {
           c.save(); c.beginPath();
           for (var p = 0; p <= x1 - x0; p += 2) {
-            var tt = p / (x1 - x0) * T * 2;
-            var th = thetaRad0() * Math.cos(2 * Math.PI / T * tt);
-            var v = Math.abs(thetaRad0()) * Math.sqrt(state.g * state.L) * Math.abs(Math.sin(2 * Math.PI / T * tt));
-            var y = bot - fn(th, v) / maxE * (bot - top);
+            var tt = p / (x1 - x0) * span;
+            var s2 = stateAt(tt);
+            var y = bot - fn(s2.th, s2.v) / maxE * (bot - top);
             if (p === 0) c.moveTo(x0 + p, y); else c.lineTo(x0 + p, y);
           }
           c.strokeStyle = color; c.lineWidth = 2.5; c.stroke(); c.restore();
@@ -554,13 +581,15 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         plot(function (th, v) { return 0.5 * state.mass * v * v; }, '#FFD8A8');
         line(c, x0, top, x1, top, '#D0C4E8', 1, [5, 4]);
         text(c, '机械能', x1 - 2, top + 8, '#8b6fb0', 11, 'right');
+        text(c, 'RK4 数值解：Ep+Ek 守恒', x0 + 4, top + 8, '#8b6fb0', 10);
       }
 
       function updateReads() {
         var cur = curTheta(), wv = curOmega();
         var v = Math.abs(state.L * wv);
         var vmax = Math.sqrt(2 * state.g * state.L * (1 - Math.cos(thetaRad0())));
-        var T = Texact();
+        var T = Tdisplay();
+        refreshTip();
         function set(k, val) { var el = q1('[data-read="' + k + '"]'); if (el) el.textContent = val; }
         set('T', T.toFixed(2));
         set('thetaNow', (cur * 180 / Math.PI).toFixed(1));
