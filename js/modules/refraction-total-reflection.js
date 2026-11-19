@@ -405,7 +405,7 @@
         '</div>' +
         '<section class="rp-card rp-card--wide" style="margin-top:16px"><h4>情境拓展：光导纤维中的全反射</h4><div class="rp-card__hint">纤芯 n₁ 必须大于包层 n₂，光才能在内壁反复全反射向前传播</div>' +
           '<canvas id="rpFiber" class="rp-cv" style="height:210px" aria-label="光纤全反射动画"></canvas></section>' +
-        '<div class="rp-note"><b>应用：</b>光导纤维、全反射棱镜都利用全反射。若纤芯折射率不大于包层，光会从侧壁漏出，无法远距离传输。</div>' +
+        '<div class="rp-note"><b>应用：</b>光纤导光必须同时满足：① 纤芯折射率 n₁ > 包层 n₂；② 光射到内壁的入射角 θ ≥ 临界角 C = arcsin(n₂/n₁)。若 n₁ ≤ n₂，或 n₁ 仅略大于 n₂ 导致 C 很大、θ < C，光都会从侧壁漏出，无法远距离传输。</div>' +
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var critLay = fit($('#rpCrit'), 250), fiberLay = fit($('#rpFiber'), 210);
@@ -442,12 +442,20 @@
     c.fillStyle = '#8b95a3'; c.font = '12px sans-serif';
     c.fillText('包层 n₂=' + fmt(st.n2, 2), 18, 18);
     c.fillText('纤芯 n₁=' + fmt(st.n1, 2), 18, h - 10);
-    var o = optics(st.n1, st.n2, 55); // 纤芯内以 55° 入射内壁
+    // 用锯齿路径的真实几何角判定：中段 Δx=seg、Δy=bot-top-8，对法线夹角约 37°
+    // 不能写死 55°——默认 n₁=1.5/n₂=1 时 C≈41.8°，中段 37°<C 本应漏光
+    var seg = 92, y0 = (top + bot) / 2;
+    var dyMid = Math.max(1, bot - top - 8), dyEnd = Math.max(1, bot - 4 - y0);
+    // 取最不利（最小）的入射角：Δy 越大角度越小 ⇒ 用 max(dy) 而非 min(dy)
+    var thGeo = Math.atan(seg / Math.max(dyMid, dyEnd)) * 180 / Math.PI;
+    var o = optics(st.n1, st.n2, thGeo);
     var ok = o.total;
     c.fillStyle = ok ? '#3f8c68' : '#c1616c'; c.font = 'bold 13px sans-serif';
-    c.fillText(ok ? '✓ 满足全反射，光被约束在纤芯内' : '✗ 不满足全反射，光会漏出纤芯', w - 260, 20);
+    c.fillText(ok ? '✓ 几何入射角 ≥ C：光被约束在纤芯内' : '✗ 几何入射角 < C：光会漏出纤芯', w - 300, 20);
+    c.fillStyle = '#8b95a3'; c.font = '12px sans-serif';
+    c.fillText('绘制几何入射角 θ≈' + fmt(thGeo, 1) + '°，临界角 C='
+      + (o.C === null ? '不存在' : fmt(o.C, 1) + '°'), 18, 34);
     // 锯齿路径
-    var seg = 92, y0 = (top + bot) / 2;
     var pts = [{ x: 16, y: y0 }];
     var dir = 1;
     for (var x = 16 + seg; x < w - 16; x += seg) {
@@ -492,7 +500,7 @@
       '<div class="rp-wrap">' +
         '<div class="rp-lead"><p>点击选项即时判定并查看解析。第 1 题可调折射率实时计算临界角；第 2 题可调参数观察全反射是否发生。</p></div>' +
         '<div class="rp-q">' +
-          '<div class="rp-q__t">1．（计算）玻璃折射率 n = 1.5，光从玻璃射向空气，临界角 C 约为多少？</div>' +
+          '<div class="rp-q__t" data-qt="1">1．（计算）玻璃折射率 n = 1.50，光从玻璃射向空气，临界角 C 约为多少？</div>' +
           '<div class="rp-bar" style="box-shadow:none;border:0;padding:12px 0">' +
             '<div class="rp-ctrl" style="flex:1 1 260px"><div class="rp-ctrl__top"><label>介质折射率 n</label><span class="rp-ctrl__val" data-val="n">1.50</span></div>' +
               '<input class="rp-range" type="range" data-key="n" min="1.1" max="2.5" step="0.01" value="1.5" aria-label="折射率"></div>' +
@@ -527,13 +535,33 @@
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var exp = {
-      '1': { right: 'B', text: 'sinC = n₂/n₁ = 1/1.5 ≈ 0.667，C = arcsin(0.667) ≈ 41.8° ≈ 42°。拖动滑块可见 n 越大 C 越小，越容易发生全反射。' },
+      '1': { right: 'B', text: '' },
       '2': { right: 'A', text: '全反射必须由光密介质射向光疏介质。水的 n≈1.33 > 空气 n≈1，满足；而 B、C、D 都是由光疏射向光密，不可能全反射。' }
     };
     function update() {
       var C = Math.asin(clamp(1 / st.n, 0, 1)) * 180 / Math.PI;
       $('[data-C]').textContent = fmt(C, 1) + '°';
       $('[data-val="n"]').textContent = fmt(st.n, 2);
+      // 第 1 题题干、四个选项与正确答案随 n 动态生成
+      $('[data-qt="1"]').textContent = '1．（计算）玻璃折射率 n = ' + fmt(st.n, 2)
+        + '，光从玻璃射向空气，临界角 C 约为多少？';
+      var cand = [C], extra = [C - 10, C + 10, C / 2, C + 5, C - 5, 30, 45];
+      function add(v) {
+        if (v < 0 || cand.length >= 4) return;
+        for (var z = 0; z < cand.length; z++) if (Math.abs(cand[z] - v) < 0.05) return;
+        cand.push(v);
+      }
+      for (var ci = 0; ci < extra.length && cand.length < 4; ci++) add(extra[ci]);
+      var letters = ['A', 'B', 'C', 'D'];
+      for (var k = 0; k < 4; k++) {
+        $('[data-q="1"] [data-ans="' + letters[k] + '"]').textContent = letters[k] + '．' + fmt(cand[k], 1) + '°';
+        if (Math.abs(cand[k] - C) < 0.05) exp['1'].right = letters[k];
+      }
+      exp['1'].text = '临界角满足 sinC = n₂/n₁ = 1/' + fmt(st.n, 2) + ' ≈ '
+        + fmt(1 / st.n, 3) + '，故 C = arcsin(' + fmt(1 / st.n, 3) + ') ≈ ' + fmt(C, 1)
+        + '°，应选 ' + exp['1'].right + '。n 越大 C 越小，越容易发生全反射。';
+      Array.prototype.forEach.call($('[data-q="1"]').querySelectorAll('.rp-opt'), function (x) { x.classList.remove('is-right', 'is-wrong'); });
+      $('[data-exp="1"]').hidden = true;
       var o = optics(st.n1, st.n2, st.th1);
       $('[data-val="n1"]').textContent = fmt(st.n1, 2);
       $('[data-val="n2"]').textContent = fmt(st.n2, 2);
