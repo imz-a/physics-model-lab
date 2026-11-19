@@ -12,7 +12,7 @@
     return {
       id: id,
       name: name,
-      status: status, // 'done' = 样板已完工 | 'todo' = 待建设
+      status: status, // 'done' = 交互完备 | 'todo' = 待建设
       brief: brief,
       extensions: extensions
     };
@@ -59,7 +59,7 @@
       color: 'sky',
       models: [
         model('capacitor', '电容器', 'done',
-          '从充放电过程理解电容、电压与电荷量的关系（样板页面已完工）。',
+          '从充放电过程理解电容、电压与电荷量的关系。',
           ['基本模型', '动态分析', '充放电实验', '高考题型']),
         model('charged-particle-electric', '带电粒子在电场中的运动', 'done',
           '分析带电粒子在匀强电场中的加速与偏转。',
