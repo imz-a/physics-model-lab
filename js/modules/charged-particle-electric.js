@@ -135,7 +135,7 @@
     var U = E * GAP;
     var disc = v0 * v0 + 2 * a * GAP;
     return {
-      E: E, q: q, m: m, v0: v0, a: a, tL: tL, yL: yL, vyL: vyL,
+      E: E, q: q, m: m, v0: v0, a: a, tL: tL, yL: yL, vyL: vyL, mode: s.mode,
       vOut: vOut, tan: vyL / v0, W: W, dEk: dEk, yScreen: yScreen,
       hit: hit, xHit: xHit, U: U, disc: disc, vAcc: disc >= 0 ? Math.sqrt(disc) : 0
     };
@@ -538,6 +538,10 @@
         saved.sign = s.sign; saved.mode = s.mode; saved.playing = s.playing;
       }
       function setRead(k, v) { var e = q1('[data-read="' + k + '"]'); if (e) e.textContent = v; }
+      function setReadVisible(k, show) {
+        var e = q1('[data-read="' + k + '"]');
+        if (e && e.parentNode) e.parentNode.style.display = show ? '' : 'none';
+      }
 
       var sliders = qa('input[type=range]');
       function inputHandler(e) {
@@ -584,6 +588,10 @@
       for (var oi = 0; oi < opts.length; oi++) on(listeners, opts[oi], 'click', optHandler);
 
       function updateReadouts(d, cur) {
+        // 读数按模式切换：偏转模型无加速电压，加速模型无侧移/偏转角
+        var accelMode = d.mode === 'accel';
+        ['t', 'y', 'tan', 'w'].forEach(function (k) { setReadVisible(k, !accelMode); });
+        ['U', 'vacc'].forEach(function (k) { setReadVisible(k, accelMode); });
         setRead('a', nf(d.a) + '');
         setRead('t', nf(d.tL * 1000));
         setRead('y', d.hit ? '撞板' : nf(d.yL * 1000));
@@ -642,7 +650,7 @@
         dead = true;
         global.cancelAnimationFrame(raf);
         for (var t in listeners) {
-          if (!listeners.hasOwnProperty(t)) continue;
+          if (!Object.prototype.hasOwnProperty.call(listeners, t)) continue;
           var arr = listeners[t];
           for (var i = 0; i < arr.length; i++) arr[i][0].removeEventListener(t, arr[i][1]);
         }
