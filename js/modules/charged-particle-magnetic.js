@@ -418,7 +418,7 @@
     } else if (idx === 2) {
       extra = '<div class="cpm-card"><div class="cpm-card__t"><i style="background:var(--lav,#D0C4E8)"></i>有界磁场 · 出射规律</div>'
         + '<div class="cpm-formula"><b>关键：圆心在入射点的正上（下）方，距离 r</b><br>'
-        + '① 若 2r &lt; 场区高度 → 粒子转半圈从入射边返回，侧移 2r<br>'
+        + '① 若 2r &lt; 场区半高 H/2（即 4r &lt; H）且 r &lt; 场宽 W → 粒子转半圈从入射边返回，侧移 2r<br>'
         + '② 若 r 足够大 → 从对边穿出，偏转角满足 sinθ = 场宽 / r<br>'
         + '③ 出射后沿切线做匀速直线，反向延长过轨迹中点'
         + '</div><div class="cpm-rel">'
