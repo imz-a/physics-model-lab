@@ -53,6 +53,11 @@
         <div class="main__inner" id="mainInner">
           <section class="model-header" id="modelHeader" aria-labelledby="modelTitle"></section>
           <div class="subtabs" id="subTabs" role="tablist" aria-label="拓展模型"></div>
+          <!-- 内容折叠工具条：由 app.js 注入折叠块后显示；无折叠块时自动隐藏 -->
+          <div class="panel-toolbar" id="panelToolbar" hidden>
+            <span class="panel-toolbar__hint" id="foldHint">次要内容已收起，点标题展开</span>
+            <button type="button" class="panel-toolbar__btn" id="foldAllBtn">全部展开</button>
+          </div>
           <section class="panel" id="panel" role="tabpanel" tabindex="0"></section>
         </div>
       </main>
