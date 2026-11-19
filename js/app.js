@@ -226,6 +226,7 @@
       try {
         var cleanup = mod.render(els.panel, state.extensionIndex);
         currentCleanup = typeof cleanup === 'function' ? cleanup : null;
+        enhanceRanges(els.panel);
       } catch (err) {
         // 单个模块出错不应让页面白屏：清理现场后退回占位卡片
         currentCleanup = null;
@@ -278,18 +279,58 @@
 #panel [class*="btn"]:active,
 #panel [class*="opt"]:active,
 #panel [data-act]:active { transform: translateY(1px); }
+/* --- 统一拖动条：白底马卡龙风格，填充度由 --fill（JS 写入）驱动 --- */
 #panel input[type="range"] {
-  height: 30px;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  height: 30px !important;
+  background: transparent !important;
+  cursor: pointer;
   touch-action: manipulation;
+  --ml-accent: #7FB3D5;
+  --ml-track: #E8EDF5;
+}
+#panel input[type="range"]::-webkit-slider-runnable-track {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  height: 8px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(to right, var(--ml-accent) 0%, var(--ml-accent) var(--fill, 50%), var(--ml-track) var(--fill, 50%), var(--ml-track) 100%) !important;
+  box-shadow: inset 0 1px 2px rgba(88,108,132,.06);
 }
 #panel input[type="range"]::-webkit-slider-thumb {
-  width: 20px !important;
-  height: 20px !important;
-  margin-top: -7px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  box-sizing: border-box !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin-top: -5px !important;
+  border: 2px solid #fff !important;
+  border-radius: 50% !important;
+  background: var(--ml-accent) !important;
+  box-shadow: 0 2px 6px rgba(88,108,132,.28) !important;
+  cursor: grab !important;
+}
+#panel input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing !important;
+  transform: scale(1.1) !important;
+}
+#panel input[type="range"]::-moz-range-track {
+  height: 8px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(to right, var(--ml-accent) 0%, var(--ml-accent) var(--fill, 50%), var(--ml-track) var(--fill, 50%), var(--ml-track) 100%) !important;
 }
 #panel input[type="range"]::-moz-range-thumb {
-  width: 20px !important;
-  height: 20px !important;
+  box-sizing: border-box !important;
+  width: 18px !important;
+  height: 18px !important;
+  border: 2px solid #fff !important;
+  border-radius: 50% !important;
+  background: var(--ml-accent) !important;
+  box-shadow: 0 2px 6px rgba(88,108,132,.28) !important;
+  cursor: grab !important;
 }
 </style>`;
 
@@ -298,6 +339,28 @@
     var box = doc.createElement('div');
     box.innerHTML = TOUCH_STYLE;
     if (box.firstChild) (doc.head || doc.documentElement).appendChild(box.firstChild);
+  }
+
+  /* ============================================================
+   * 拖动条填充反馈：为每个 range 写入 --fill 百分比，驱动轨道渐变。
+   * 监听直接绑在 range 元素上，元素随模块 innerHTML 重建自然回收，
+   * 无需在 cleanup 中解绑，也绝不把监听挂到 window/document。
+   * ============================================================ */
+  function enhanceRanges(panel) {
+    var ranges = panel.querySelectorAll('input[type="range"]');
+    for (var i = 0; i < ranges.length; i++) {
+      (function (el) {
+        function update() {
+          var min = parseFloat(el.min), max = parseFloat(el.max), val = parseFloat(el.value);
+          if (!isFinite(min) || !isFinite(max) || max <= min) return;
+          var pct = (val - min) / (max - min) * 100;
+          if (pct < 0) pct = 0; else if (pct > 100) pct = 100;
+          el.style.setProperty('--fill', pct + '%');
+        }
+        update();
+        el.addEventListener('input', update);
+      })(ranges[i]);
+    }
   }
 
   /* ============================================================
