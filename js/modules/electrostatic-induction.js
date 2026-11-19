@@ -45,7 +45,7 @@
       +'<div class="ei-card"><div class="ei-t"><i style="background:var(--mint,#B8E8D0)"></i>观察提示</div><div class="ei-f">左侧聚集负电荷，右侧聚集正电荷；场线在导体表面处弯曲并垂直入射。<br>切换「空腔」「接地」观察电荷分布与屏蔽效果的变化。</div></div>';
     return '<div class="ei-w"><div class="ei-bar"><span class="ei-chip">静电场中的导体</span>'+seg('shape',[['solid','实心导体'],['hollow','空腔导体']],s.hollow?'hollow':'solid')+seg('gnd',[['off','不接地'],['on','接地']],s.ground?'on':'off')+'<span class="ei-sp"></span><button class="ei-btn ei-btn--p" data-play>'+(s.playing?'⏸ 暂停':'▶ 播放')+'</button><button class="ei-btn" data-reset>↺ 重置</button></div>'
       +'<div class="ei-grid"><div class="ei-card"><div class="ei-t"><i></i>导体在匀强外场中<span class="ei-hint">粉色 + / 蓝色 − 为感应电荷</span></div><div data-cv></div></div>'
-      +'<div class="ei-side"><div class="ei-card"><div class="ei-t"><i style="background:var(--pink,#FFB3BA)"></i>参数</div><label class="ei-ctrl"><span>外电场强度 E₀<b data-o="E"></b></span><input type="range" data-k="E" min="0.3" max="2.5" step="0.1" value="'+s.E+'"></label><div class="ei-n">拖动滑块，观察表面电荷密度与场线弯曲程度同步变化。</div></div>'
+      +'<div class="ei-side"><div class="ei-card"><div class="ei-t"><i style="background:var(--pink,#FFB3BA)"></i>参数</div><label class="ei-ctrl"><span>外电场强度 E₀<b data-o="E"></b></span><input type="range" data-k="E" min="0.3" max="2.5" step="0.1" value="'+s.E+'"></label><div class="ei-n">外场越强，表面感应电荷越密（符号颜色越深）；匀强场中场线形状与场强大小无关，故场线形状不变。</div></div>'
       +'<div class="ei-card"><div class="ei-t"><i style="background:var(--peach,#FFD8A8)"></i>实时读数</div><div class="ei-rd">'+rd('in','导体内部 E','V/m')+rd('surf','表面最大 σ','相对值')+rd('pot','导体电势','V')+rd('net','净感应电荷','')+'</div><div class="ei-n" data-status></div></div></div></div><div class="ei-extra">'+ex+'</div></div>';
   }
   function arrow(ctx,x1,y1,x2,y2,c){var dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);if(L<3)return;var ux=dx/L,uy=dy/L,h=8;ctx.save();ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=1.9;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-ux*h-uy*h*.6,y2-uy*h+ux*h*.6);ctx.lineTo(x2-ux*h+uy*h*.6,y2-uy*h-ux*h*.6);ctx.closePath();ctx.fill();ctx.restore();}
@@ -64,7 +64,7 @@
     q('[data-o="E"]').textContent=nf(s.E);
     on(LST,q('[data-k="E"]'),'input',function(e){s.E=Number(e.target.value);q('[data-o="E"]').textContent=nf(s.E);sync();resetQuiz();});
     for(var g=0;g<qa('[data-seg]').length;g++){(function(box){on(LST,box,'click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(!b)return;var n=box.getAttribute('data-seg'),val=b.getAttribute('data-val');if(n==='shape')s.hollow=val==='hollow';else s.ground=val==='on';setSeg(n,val);sync();resetQuiz();});})(qa('[data-seg]')[g]);}
-    var pb=q('[data-play]');on(LST,pb,'click',function(){s.playing=!s.playing;pb.textContent=s.playing?'⏸ 暂停':'▶ 播放';sync();});on(LST,q('[data-reset]'),'click',function(){s.t=0;});
+    var pb=q('[data-play]');on(LST,pb,'click',function(){s.playing=!s.playing;if(s.playing&&s.t>=1.2)s.t=0;pb.textContent=s.playing?'⏸ 暂停':'▶ 播放';sync();});on(LST,q('[data-reset]'),'click',function(){s.t=0;draw();});
     var Q={1:{opts:[],correct:0,text:'',expl:''},2:{ans:0,text:'',unit:'',expl:''}},sel=-1;
     function quizData(){
       Q[1].text='导体达到静电平衡后，关于导体内部与表面，下列说法正确的是？';
@@ -109,16 +109,22 @@
         ctx.save();ctx.fillStyle='#ffffff';ctx.strokeStyle='#B8A9D8';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(cx,cy,.33*sc,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
         label(ctx,'腔内 E = 0',cx,cy+5,C.lavD,'center');
       }else label(ctx,'E内 = 0',cx,cy-4,C.lavD,'center');
-      // 感应电荷
+      // 感应电荷「流动就位」动画：重置后 t=0 电荷散开，播放时 1.2 s 内归位；暂停即冻结
+      var settle=Math.min(1,s.t/1.2);
       var n=36;
       for(var i=0;i<n;i++){
         var th=Math.PI*2*i/n,cs=Math.cos(th),mag=Math.abs(cs)*s.E;
         var isPos=cs>0;
         var reduce=s.ground&&isPos?.35:1;
-        var alpha=Math.min(1,mag*reduce*.9);if(alpha<.12)continue;
-        var x=cx+(R+.09)*sc*Math.cos(th),y=cy-(R+.09)*sc*Math.sin(th);
+        var alpha=Math.min(1,mag*reduce*.9)*(.16+.84*settle);if(alpha<.12)continue;
+        var rr=(R+.09)+(1-settle)*.16;
+        var x=cx+rr*sc*Math.cos(th),y=cy-rr*sc*Math.sin(th);
         ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=isPos?C.pinkD:C.skyD;ctx.font='bold 17px sans-serif';ctx.textAlign='center';ctx.fillText(isPos?'+':'−',x,y+6);ctx.restore();
       }
+      // 沿上方场线巡游的探测箭头，随播放/暂停/重置即时响应
+      var probeX=-2.35+(s.t*.8)%4.7;
+      arrow(ctx,M(probeX,1.05).x,M(probeX,1.05).y,M(probeX+.18,1.05).x,M(probeX+.18,1.05).y,C.pinkD);
+      if(settle<1)label(ctx,'感应电荷流动就位中…',30,50,C.lavD);
       if(s.ground){
         ctx.save();ctx.strokeStyle='#57A47F';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(cx,cy+R*sc);ctx.lineTo(cx,cy+R*sc+22);ctx.moveTo(cx-12,cy+R*sc+22);ctx.lineTo(cx+12,cy+R*sc+22);ctx.moveTo(cx-8,cy+R*sc+27);ctx.lineTo(cx+8,cy+R*sc+27);ctx.moveTo(cx-4,cy+R*sc+32);ctx.lineTo(cx+4,cy+R*sc+32);ctx.stroke();ctx.restore();
         label(ctx,'接地',cx+18,cy+R*sc+26,C.mintD);
