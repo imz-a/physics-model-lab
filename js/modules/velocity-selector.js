@@ -266,7 +266,7 @@
         var right=E/(B*Bp*r), optsHtml='';
         var set=[right*0.5, right, right*2, right*0.25].sort(function(a,b){return a-b});
         var labels=['A','B','C','D'];
-        for(var i=0;i<4;i++) optsHtml += '<button class="vs-opt" type="button" data-v="'+set[i].toFixed(4)+'">'+labels[i]+'. '+fmt(set[i])+'</button>';
+        for(var i=0;i<4;i++) optsHtml += '<button class="vs-opt" type="button" data-v="'+set[i].toFixed(4)+'">'+labels[i]+'. '+Number(set[i].toPrecision(3))+'</button>';
         q('vsQ2Opts').innerHTML = optsHtml;
         q('vsQ2Fb').textContent = '';
         var btns=q('vsQ2Opts').querySelectorAll('.vs-opt');
