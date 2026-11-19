@@ -507,12 +507,12 @@ input.sm-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
           if (pxc === 0) c.moveTo(x0 + pxc, yy); else c.lineTo(x0 + pxc, yy);
         }
         c.strokeStyle = '#FFB3BA'; c.lineWidth = 2; c.stroke(); c.restore();
-        // 游标：在当前 6 s 窗口内按相位取模，保证游标始终落在曲线上
+        // 游标：在当前 6 s 窗口内按相位取模；纵坐标用与曲线同源的 A·sin(ω·tCur)，保证严格落在曲线上
         var phaseSpan = omega() * tMax;
         var phaseIn = ((state.phase % phaseSpan) + phaseSpan) % phaseSpan;
         var tCur = phaseIn / omega();
         var cx = x0 + tCur / tMax * (x1 - x0);
-        var cyv = midY - curX() * yScale;
+        var cyv = midY - state.A * Math.sin(omega() * tCur) * yScale;
         line(c, cx, pad.t, cx, h - pad.b, '#BFE3F5', 1, [3, 3]);
         dot(c, cx, cyv, 5, '#FFB3BA', '#fff');
         text(c, 'A=' + state.A.toFixed(1) + ' m　T=' + T.toFixed(2) + ' s', x1 - 4, pad.t + 16, '#8b6fb0', 10, 'right');
