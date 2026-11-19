@@ -161,13 +161,13 @@
     }
   };
 
-  function drawDecayCurve(lay, st, cursor) {
+  function drawDecayCurve(lay, st, cursor, refT) {
     var c = lay.c, w = lay.w, h = lay.h;
     c.clearRect(0, 0, w, h);
     var L = 52, R = w - 18, Tp = 18, B = h - 36;
-    var tMax = Math.max(12, st.T * 4);
+    var tMax = 40, nMax = 200;   // 固定绝对量程：t 与 N₀ 滑块上限，不随 T 缩放
     function X(t) { return L + t / tMax * (R - L); }
-    function Y(n) { return B - n / st.N0 * (B - Tp); }
+    function Y(n) { return B - n / nMax * (B - Tp); }
     c.strokeStyle = '#eef2f6'; c.lineWidth = 1;
     for (var g = 1; g <= 4; g++) {
       c.beginPath(); c.moveTo(L, Tp + (B - Tp) * g / 5); c.lineTo(R, Tp + (B - Tp) * g / 5); c.stroke();
@@ -176,7 +176,20 @@
     c.strokeStyle = '#9aa6b4'; c.lineWidth = 1.5;
     c.beginPath(); c.moveTo(L, Tp); c.lineTo(L, B); c.lineTo(R, B); c.stroke();
     c.fillStyle = '#8b95a3'; c.font = '12px sans-serif';
-    c.fillText('N', 12, Tp + 6); c.fillText('t', R - 6, B + 20); c.fillText('N₀=' + st.N0, L + 6, Tp + 14);
+    c.fillText('N / 个', 6, 12); c.fillText('t / 单位时间', R - 86, B + 22); c.fillText('N₀=' + st.N0, L + 6, Tp + 14);
+    for (var tk = 0; tk <= tMax; tk += 10) c.fillText(String(tk), X(tk) - 6, B + 16);
+    for (var nk = 0; nk <= nMax; nk += 50) c.fillText(String(nk), 14, Y(nk) + 4);
+    // 变化前半衰期对应的理论曲线（灰虚线）
+    if (refT && Math.abs(refT - st.T) > 1e-9) {
+      c.save(); c.strokeStyle = '#aeb8c6'; c.lineWidth = 2; c.setLineDash([6, 5]); c.beginPath();
+      for (var rp = 0; rp <= R - L; rp += 2) {
+        var rt = rp / (R - L) * tMax, rn = remaining(st.N0, refT, rt);
+        if (!rp) c.moveTo(X(rt), Y(rn)); else c.lineTo(X(rt), Y(rn));
+      }
+      c.stroke(); c.restore();
+      c.save(); c.fillStyle = '#8b95a3'; c.font = '11px sans-serif';
+      c.fillText('灰虚线：变化前 T=' + fmt(refT, 1), L + 6, Tp + 30); c.restore();
+    }
     c.beginPath();
     for (var px = 0; px <= R - L; px += 2) {
       var t = px / (R - L) * tMax, n = remaining(st.N0, st.T, t);
@@ -226,7 +239,7 @@
     var $ = function (s) { return ctx.container.querySelector(s); };
     var atomsLay = fit($('#ndAtoms'), 290), curveLay = fit($('#ndCurve'), 290);
     var ro = { N: $('[data-ro="N"]'), ratio: $('[data-ro="ratio"]'), decayed: $('[data-ro="decayed"]'), half: $('[data-ro="half"]') };
-    var ps = [], playing = false;
+    var ps = [], playing = false, refT = st.T;   // 变化前半衰期（灰虚线参考）
     function initParticles() {
       ps = [];
       var cols = Math.ceil(Math.sqrt(st.N0 * 1.7));
@@ -263,6 +276,9 @@
       ro.half.textContent = fmt(st.t / st.T, 2) + ' 个 T';
       syncParticles();
     }
+    // 先于 bindCtrls 保存旧 T，供曲线灰虚线参考
+    var tEl = ctx.container.querySelector('[data-key="T"]');
+    if (tEl) ctx.on(tEl, 'input', function () { refT = st.T; });
     bindCtrls(ctx, st, ['T', 'N0', 't'], function (key) {
       if (key === 'N0') initParticles();
       update();
@@ -276,7 +292,7 @@
     });
     on($('[data-act="reset"]'), 'click', function () {
       playing = false; $('[data-act="play"]').textContent = '▶ 播放衰变';
-      st.T = 5; st.N0 = 100; st.t = 10;
+      st.T = 5; st.N0 = 100; st.t = 10; refT = 5;
       ['T', 'N0', 't'].forEach(function (k) {
         ctx.container.querySelector('[data-key="' + k + '"]').value = st[k];
         ctx.container.querySelector('[data-val="' + k + '"]').innerHTML = fmt(st[k], k === 'N0' ? 0 : 1) + '<em>' + (k === 'N0' ? '个' : '单位') + '</em>';
@@ -287,7 +303,7 @@
     ctx.loop(function (t, dt) {
       if (playing) {
         st.t += dt * 0.008;
-        if (st.t > Math.min(40, st.T * 5)) { st.t = 0; }
+        if (st.t > 40) { st.t = 0; }   // 与固定 tMax=40 及 t 滑块上限一致
         ctx.container.querySelector('[data-key="t"]').value = st.t;
         ctx.container.querySelector('[data-val="t"]').innerHTML = fmt(st.t, 1) + '<em>单位</em>';
         update();
@@ -308,7 +324,7 @@
         c.beginPath(); c.arc(px - 1.4, py - 1.4, 1.2, 0, Math.PI * 2);
         c.fillStyle = 'rgba(255,255,255,.85)'; c.fill();
       }
-      drawDecayCurve(curveLay, st, true);
+      drawDecayCurve(curveLay, st, true, refT);
     });
     update();
   }
@@ -342,12 +358,13 @@
     var $ = function (s) { return ctx.container.querySelector(s); };
     var lay = fit($('#ndStat'), 320);
     var ro = { avg: $('[data-ro="avg"]'), cnt: $('[data-ro="cnt"]') };
-    var sims = [];
+    var sims = [], refT = st.T;   // 变化前半衰期（灰虚线参考）
     function regen() {
       sims = [];
       for (var s = 0; s < 3; s++) {
         var times = [];
-        for (var i = 0; i < st.N0; i++) times.push(-st.T * Math.log(1 - Math.random()));
+        // 指数分布抽样：λ=ln2/T（半衰期 T），漏除 ln2 会让模拟线比理论线快约 31%
+        for (var i = 0; i < st.N0; i++) times.push(-st.T * Math.log(1 - Math.random()) / Math.LN2);
         times.sort(function (a, b) { return a - b; });
         sims.push(times);
       }
@@ -358,7 +375,7 @@
       ro.cnt.textContent = st.tosses;
     }
     on($('[data-key="N0"]'), 'input', function () { st.N0 = parseFloat(this.value); regen(); });
-    on($('[data-key="T"]'), 'input', function () { st.T = parseFloat(this.value); regen(); });
+    on($('[data-key="T"]'), 'input', function () { refT = st.T; st.T = parseFloat(this.value); regen(); });
     on($('[data-act="regen"]'), 'click', regen);
     on($('[data-act="sim"]'), 'click', function () {
       var left = 0;
@@ -373,15 +390,26 @@
       var c = lay.c, w = lay.w, h = lay.h;
       c.clearRect(0, 0, w, h);
       var L = 52, R = w - 18, Tp = 16, B = h - 34;
-      var tMax = st.T * 3;
+      var tMax = 40, nMax = 400;   // 固定绝对量程，避免 T 改变时曲线形状完全不变
       function X(t) { return L + t / tMax * (R - L); }
-      function Y(n) { return B - n / st.N0 * (B - Tp); }
+      function Y(n) { return B - n / nMax * (B - Tp); }
       c.strokeStyle = '#eef2f6'; c.lineWidth = 1;
       for (var g = 1; g <= 4; g++) { c.beginPath(); c.moveTo(L, Y(st.N0 * g / 5)); c.lineTo(R, Y(st.N0 * g / 5)); c.stroke(); }
       c.strokeStyle = '#9aa6b4'; c.lineWidth = 1.5;
       c.beginPath(); c.moveTo(L, Tp); c.lineTo(L, B); c.lineTo(R, B); c.stroke();
       c.fillStyle = '#8b95a3'; c.font = '12px sans-serif';
-      c.fillText('N', 12, Tp + 6); c.fillText('t', R - 6, B + 20);
+      c.fillText('N / 个', 6, 10); c.fillText('t / 单位时间', R - 86, B + 20);
+      for (var tk2 = 0; tk2 <= tMax; tk2 += 10) c.fillText(String(tk2), X(tk2) - 6, B + 16);
+      for (var nk2 = 0; nk2 <= nMax; nk2 += 100) c.fillText(String(nk2), 14, Y(nk2) + 4);
+      // 变化前理论曲线（灰虚线）
+      if (Math.abs(refT - st.T) > 1e-9) {
+        c.save(); c.strokeStyle = '#aeb8c6'; c.lineWidth = 2; c.setLineDash([6, 5]); c.beginPath();
+        for (var qp = 0; qp <= R - L; qp += 2) {
+          var qt = qp / (R - L) * tMax, qn = remaining(st.N0, refT, qt);
+          if (!qp) c.moveTo(X(qt), Y(qn)); else c.lineTo(X(qt), Y(qn));
+        }
+        c.stroke(); c.restore();
+      }
       // 随机阶梯线
       var cols = ['#e8dcf2', '#d9e7f2', '#e6e0d0'];
       sims.forEach(function (times, k) {
@@ -496,7 +524,7 @@
       '<div class="rp-wrap nd-wrap">' +
         '<div class="nd-lead"><p>点击选项即时判定并查看解析。第 1 题可调 N₀、T、t 实时计算剩余质量；第 2 题考查由质量数、电荷数守恒判断衰变类型。</p></div>' +
         '<div class="nd-q">' +
-          '<div class="nd-q__t">1．（计算）某放射性元素初始质量 100 g，半衰期 5 天，经过 15 天后剩余质量为多少？</div>' +
+          '<div class="nd-q__t" data-qt="1">1．（计算）某放射性元素初始质量 100 g，半衰期 5 天，经过 15 天后剩余质量为多少？</div>' +
           '<div class="nd-bar" style="box-shadow:none;border:0;padding:12px 0">' +
             ctrlHtml('N0', '初始质量 m₀', 20, 200, 10, 100, 'g') +
             ctrlHtml('T', '半衰期 T', 1, 12, 0.5, 5, '天') +
@@ -524,17 +552,38 @@
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var exp = {
-      '1': { right: 'C', text: '经过 15 天 = 3 个半衰期，m = 100 × (1/2)³ = 12.5 g。拖动滑块可见：每多一个半衰期，剩余质量就减半。' },
+      '1': { right: 'C', text: '' },
       '2': { right: 'A', text: '由质量数守恒：238 = 234 + A，得 A = 4；由电荷数守恒：92 = 90 + Z，得 Z = 2。故 X 为 ⁴₂He，即 α 粒子。' }
     };
     $('[data-eq2]').innerHTML = nuHtml(238, 92, 'U') + '<span class="nd-arrow">→</span>'
       + nuHtml(234, 90, 'Th') + '<span class="nd-arrow">+</span>' + nuHtml(4, 2, 'He');
     function update() {
       var m = remaining(st.N0, st.T, st.t);
-      $('[data-m]').textContent = fmt(m, 2);
+      $('[data-m]').textContent = m < 0.01 ? m.toExponential(2) : fmt(m, 2);
       $('[data-val="N0"]').innerHTML = fmt(st.N0, 0) + '<em>g</em>';
       $('[data-val="T"]').innerHTML = fmt(st.T, 1) + '<em>天</em>';
       $('[data-val="t"]').innerHTML = fmt(st.t, 0) + '<em>天</em>';
+      // 题干、选项与答案随 N₀ / T / t 动态生成
+      $('[data-qt="1"]').textContent = '1．（计算）某放射性元素初始质量 ' + fmt(st.N0, 0) + ' g，半衰期 '
+        + fmt(st.T, 1) + ' 天，经过 ' + fmt(st.t, 0) + ' 天后剩余质量为多少？';
+      var cand = [m], extra = [m / 2, m * 2, m / 4, st.N0 / 2, st.N0, m * 4, m * 8, st.N0 / 4];
+      function near(a, b) { return Math.abs(a - b) <= Math.max(1e-12, Math.abs(a) * 0.01, Math.abs(b) * 0.01); }
+      function push(v) {
+        for (var z = 0; z < cand.length; z++) if (near(cand[z], v)) return;
+        if (cand.length < 4) cand.push(v);
+      }
+      function mtxt(v) { return v < 0.01 ? v.toExponential(2) : fmt(v, 2); }
+      for (var i = 0; i < extra.length && cand.length < 4; i++) push(extra[i]);
+      var letters = ['A', 'B', 'C', 'D'];
+      for (var k = 0; k < 4; k++) {
+        $('[data-q="1"] [data-ans="' + letters[k] + '"]').textContent = letters[k] + '．' + mtxt(cand[k]) + ' g';
+        if (near(cand[k], m)) exp['1'].right = letters[k];
+      }
+      exp['1'].text = '经过 t/T = ' + fmt(st.t / st.T, 2) + ' 个半衰期，m = ' + fmt(st.N0, 0)
+        + ' × (1/2)^(' + fmt(st.t / st.T, 2) + ') = ' + mtxt(m) + ' g，应选 ' + exp['1'].right
+        + '。每多一个半衰期，剩余质量减半。';
+      Array.prototype.forEach.call($('[data-q="1"]').querySelectorAll('.nd-opt'), function (x) { x.classList.remove('is-right', 'is-wrong'); });
+      $('[data-exp="1"]').hidden = true;
     }
     bindCtrls(ctx, st, ['N0', 'T', 't'], update);
     ctx.container.querySelector('[data-val="N0"]').innerHTML = '100<em>g</em>';
