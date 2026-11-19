@@ -36,6 +36,8 @@
   function on(m,e,t,f){e.addEventListener(t,f);var a=m[t]||(m[t]=[]);a.push([e,f]);}
   function rd(k,l,u){return '<div><span>'+l+'</span><b data-r="'+k+'">—</b> '+u+'</div>';}
   function quiz(){return '<div class="lf-qz"><h5>第 1 题 · 电流方向</h5><div data-qt="1"></div><div class="lf-opts" data-op="1"></div><button class="lf-btn" data-sub="1">提交答案</button><div class="lf-fb" data-fb="1" hidden></div><h5>第 2 题 · 焦耳热</h5><div data-qt="2"></div><div class="lf-in"><input type="number" step="any" data-num placeholder="输入数值"><span data-unit></span><button class="lf-btn" data-sub="2">提交答案</button></div><div class="lf-fb" data-fb="2" hidden></div></div>';}
+  var LF_CHART_TITLE=['磁通量 Φ 随线框位置 x 变化','感应电动势 ε — t 波形','累计焦耳热 Q 随时间增长','单次穿越总热量 Q = 2B²L³/R'];
+  var LF_CHART_HINT=['斜率非零处才有感应电动势','进入与穿出为等高反向平台','Q 单调增长，平台期保持不变','Q ∝ B²L³/R，随参数实时重算'];
   function calc(s,xc){
     var lw=s.L*10,fw=s.Wf*10,xf=3,total=lw+fw+3.4;
     var re=xc+lw; // 线框右边界
@@ -64,7 +66,8 @@
     [['B','磁感应强度 B',0.2,2,0.1,s.B,'T'],['L','线框边长 L',0.1,0.4,0.02,s.L,'m'],['v','运动速度 v',0.3,3,0.1,s.v,'m/s'],['R','回路电阻 R',0.5,8,0.5,s.R,'Ω'],['Wf','磁场区宽度 w',0.2,0.8,0.05,s.Wf,'m']].forEach(function(a){
       sl+='<label class="lf-ctrl"><span>'+a[1]+'<b data-o="'+a[0]+'"></b></span><input type="range" data-k="'+a[0]+'" min="'+a[2]+'" max="'+a[3]+'" step="'+a[4]+'" value="'+a[5]+'"></label>';});
     return '<div class="lf-w"><div class="lf-bar"><span class="lf-chip">电磁感应 · 线框穿越边界</span><span class="lf-sp"></span><button class="lf-btn lf-btn--p" data-play>'+(s.playing?'⏸ 暂停':'▶ 播放')+'</button><button class="lf-btn" data-reset>↺ 重置</button></div>'
-      +'<div class="lf-grid"><div class="lf-card"><div class="lf-t"><i></i>线框穿过有界磁场<span class="lf-hint">淡紫区为磁场（× 向里）</span></div><div data-cv></div></div>'
+      +'<div class="lf-grid"><div class="lf-card"><div class="lf-t"><i></i>线框穿过有界磁场<span class="lf-hint">淡紫区为磁场（× 向里）</span></div><div data-cv></div>'
+      +'<div class="lf-t" style="margin-top:12px"><i style="background:var(--sky,#BFE3F5)"></i>'+LF_CHART_TITLE[idx]+'<span class="lf-hint">'+LF_CHART_HINT[idx]+'</span></div><div data-datachart></div></div>'
       +'<div class="lf-side"><div class="lf-card"><div class="lf-t"><i style="background:var(--pink,#FFB3BA)"></i>参数</div>'+sl+'</div>'
       +'<div class="lf-card"><div class="lf-t"><i style="background:var(--peach,#FFD8A8)"></i>实时读数</div><div class="lf-rd">'+rd('ph','当前阶段','')+rd('emf','感应电动势 ε','V')+rd('I','感应电流 I','A')+rd('F','安培力 F','N')+rd('P','热功率 P','W')+rd('Q','累计热量 Q','J')+'</div><div class="lf-n" data-status></div></div></div></div><div class="lf-extra">'+ex+'</div></div>';
   }
@@ -104,11 +107,51 @@
     label(ctx,'— 当前　┄ 变化前',L+6,Tp+10,C.mintD);
   }
 
+  function drawDataChart(view, idx, s, d) {
+    var K=global.ChartKit; if(!K) return; var C2=K.colors;
+    var B=s.B,L=s.L,v=s.v,R=s.R,Wf=s.Wf, lw=d.lw, fw=d.fw, xf=d.xf;
+    if(idx===0){
+      // 磁通量随线框右边界位置：Φ = B·L·重叠宽度
+      var pts=[];
+      for(var i=0;i<=100;i++){
+        var xc=-1.5+(d.total+1.5)*i/100, re2=xc+lw;
+        var ov=Math.max(0,Math.min(re2,xf+fw)-Math.max(xc,xf));
+        pts.push([xc, B*L*(ov/10)]); // 重叠宽度 mm→m
+      }
+      K.line(view,{title:'磁通量 Φ(x) · 平台期斜率为零',xLabel:'线框左边界 x',xUnit:'m',yLabel:'磁通量 Φ',yUnit:'Wb',
+        series:[{name:'Φ(x)',color:C2.lav,width:2.6,points:pts}],
+        markers:[{x:s.xc,y:B*L*Math.max(0,Math.min(s.xc+lw,xf+fw)-Math.max(s.xc,xf))/10,label:'当前',color:C2.pink,r:5,cross:true}]});
+    } else if(idx===1){
+      var tCut=Math.min(L,Wf)/v, tHold=Math.abs(Wf-L)/v, per=2*tCut+tHold, eps=B*L*v;
+      var pts2=[], tt=(Math.max(0,s.t)%per);
+      for(var j=0;j<=100;j++){var t=per*j/100;var e=(t<tCut)?1:(t<tCut+tHold)?0:(t<2*tCut+tHold)?-1:0;pts2.push([t,e*eps]);}
+      K.line(view,{title:'ε—t 波形：进入正、平台零、穿出负',xLabel:'时间 t',xUnit:'s',yLabel:'电动势 ε',yUnit:'V',
+        series:[{name:'ε(t)',color:C2.sky,width:2.6,points:pts2}],
+        markers:[{x:tt,y:(tt<tCut)?eps:(tt<tCut+tHold)?0:(tt<2*tCut+tHold)?-eps:0,label:'当前',color:C2.pink,r:5,cross:true}],
+        hlines:[{y:0,label:'零线',color:C2.ink3,dash:[4,4]}]});
+    } else if(idx===2){
+      // Q 与 W 累积对比（柱状）
+      K.bars(view,{title:'能量守恒：克服安培力做功 = 焦耳热',yLabel:'能量',yUnit:'J',
+        yMax:Math.max(1e-6,s.Q,s.W)*1.3,
+        bars:[{label:'焦耳热 Q',value:s.Q,color:C2.peach,note:'∫I²R dt'},
+              {label:'安培力功 W',value:s.W,color:C2.mint,note:'∫F·v dt'}],
+        fmt:function(val){return val.toExponential(2)+' J';}});
+    } else {
+      // 总热量随 B 变化（控制变量）
+      var qpts=[];
+      for(var k=0;k<=40;k++){var bb=0.2+1.8*k/40;qpts.push([bb,2*bb*bb*L*L*L/R]);}
+      K.line(view,{title:'总热量 Q = 2B²L³/R（随 B² 增长）',xLabel:'磁感应强度 B',xUnit:'T',yLabel:'总热量 Q',yUnit:'J',
+        series:[{name:'Q(B)',color:C2.peach,width:2.6,points:qpts}],
+        markers:[{x:B,y:2*B*B*L*L*L/R,label:'当前',color:C2.pink,r:5,cross:true}]});
+    }
+  }
+
   NS.modules['loop-entering-field']={render:function(container,extIndex){
     style();var idx=Math.max(0,Math.min(3,Number(extIndex)||0));
     var s={B:saved.B,L:saved.L,v:saved.v,R:saved.R,Wf:saved.Wf,playing:saved.playing,xc:-1.5,t:0,Q:0,W:0};
     container.innerHTML=build(idx,s);
     var v=view(1000,430);container.querySelector('[data-cv]').appendChild(v.el);
+    var dv=view(700,250);dv.el.style.background='#fff';container.querySelector('[data-datachart]').appendChild(dv.el);
     var chartV=idx===1?view(560,210):null;if(chartV){chartV.el.className='lf-c';container.querySelector('[data-chart]').appendChild(chartV.el);}
     var ctx=v.ctx,W=v.w,H=v.h,LST={},rAF=0,last=0,dead=false;
     var q=function(x){return container.querySelector(x);},qa=function(x){return container.querySelectorAll(x);};
@@ -172,6 +215,7 @@
         chart(chartV,s,Math.max(0,s.t)%per);}
       if(idx===2){set('qtot',nf(2*s.B*s.B*s.L*s.L*s.L/s.R)+' J');var mx=Math.max(s.Q,s.W,1e-6);var f1=q('[data-bar="q"]'),f2=q('[data-bar="w"]'),t1=q('[data-barv="q"]'),t2=q('[data-barv="w"]');if(f1)f1.style.width=(s.Q/mx*100).toFixed(1)+'%';if(f2)f2.style.width=(s.W/mx*100).toFixed(1)+'%';if(t1)t1.textContent=nf(s.Q)+' J';if(t2)t2.textContent=nf(s.W)+' J';}
       var st=q('[data-status]');if(st)st.textContent=d.phase==='完全在内'?'磁通量不变，ε=0，无感应电流。':d.phase==='进入'?'右边切割，逆时针电流，安培力向左阻碍运动。':d.phase==='穿出'?'左边切割，顺时针电流，安培力仍向左阻碍。':'线框尚未进入磁场。';
+      drawDataChart(dv,idx,s,d);
       rAF=global.requestAnimationFrame(frame);
     }
     rAF=global.requestAnimationFrame(frame);
