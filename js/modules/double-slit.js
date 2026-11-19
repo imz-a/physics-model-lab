@@ -358,12 +358,18 @@
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var cvs = { l: fit($('.cvL'), 200), d: fit($('.cvD'), 200), k: fit($('.cvK'), 200) };
+    var ref = { lambda: st.lambda, d: st.d, L: st.L };  // 变化前参数快照
+    // 先于 bindCtrls 注册：在 st 被改写前保存旧值
+    ['lambda', 'd', 'L'].forEach(function (key) {
+      var el = ctx.container.querySelector('[data-key="' + key + '"]');
+      if (el) ctx.on(el, 'input', function () { ref.lambda = st.lambda; ref.d = st.d; ref.L = st.L; });
+    });
     function update() {
       var dx = dxOf(st.lambda, st.d, st.L);
       $('[data-ro="dx"]').innerHTML = fmt(dx, 2) + ' <small>mm</small>';
       $('[data-ro="ratio"]').textContent = st.lambda + ' : ' + fmt(st.d, 2) + ' : ' + fmt(st.L, 1);
       $('[data-ro="dbl"]').innerHTML = fmt(dxOf(Math.min(700, st.lambda * 2), st.d, st.L), 2) + ' <small>mm</small>';
-      Object.keys(cvs).forEach(function (key) { drawCurve(cvs[key], key, st); });
+      Object.keys(cvs).forEach(function (key) { drawCurve(cvs[key], key, st, ref); });
     }
     bindCtrls(ctx, st, update);
     on(win, 'resize', function () {
@@ -371,7 +377,7 @@
     });
     update();
   }
-  function drawCurve(lay, type, st) {
+  function drawCurve(lay, type, st, ref) {
     var c = lay.c, w = lay.w, h = lay.h;
     c.clearRect(0, 0, w, h);
     var L = 40, R = w - 14, Tp = 14, B = h - 30;
@@ -386,28 +392,50 @@
       xmin = 0.1; xmax = 1; curX = st.d; label = 'd/mm';
       fn = function (x) { return dxOf(st.lambda, x, st.L); };
     }
-    var vals = [];
-    for (var i = 0; i <= 60; i++) { var x = xmin + (xmax - xmin) * i / 60; vals.push(fn(x)); }
-    var ymax = Math.max.apply(null, vals) * 1.12;
+    // 固定绝对量程：λ=700nm、d=0.1mm、L=3m 时 Δx≈21mm，取 22mm；不随当前参数自归一
+    var yMax = 22;
     function X(x) { return L + (x - xmin) / (xmax - xmin) * (R - L); }
-    function Y(y) { return B - y / ymax * (B - Tp); }
+    function Y(y) { return B - Math.min(1.05, y / yMax) * (B - Tp); }
+    function fnRef(x) {
+      if (type === 'l') return dxOf(x, ref.d, ref.L);
+      if (type === 'd') return dxOf(ref.lambda, ref.d, x);
+      return dxOf(ref.lambda, x, ref.L);
+    }
     c.strokeStyle = '#eef2f6'; c.lineWidth = 1;
-    for (var g = 1; g <= 3; g++) { var gy = Tp + (B - Tp) * g / 4; c.beginPath(); c.moveTo(L, gy); c.lineTo(R, gy); c.stroke(); }
+    for (var g = 0; g <= 4; g++) {
+      var gy = Y(g * 5);
+      c.beginPath(); c.moveTo(L, gy); c.lineTo(R, gy); c.stroke();
+      c.fillStyle = '#aab4c0'; c.font = '10px sans-serif'; c.fillText(String(g * 5), 14, gy + 4);
+    }
+    for (var gx = 1; gx <= 4; gx++) {
+      var xv = xmin + (xmax - xmin) * gx / 5;
+      c.beginPath(); c.moveTo(X(xv), Tp); c.lineTo(X(xv), B); c.stroke();
+    }
     c.strokeStyle = '#9aa6b4'; c.lineWidth = 1.5;
     c.beginPath(); c.moveTo(L, Tp); c.lineTo(L, B); c.lineTo(R, B); c.stroke();
+    // 变化前曲线（灰虚线，参数快照）
+    if (ref) {
+      c.save(); c.strokeStyle = '#aeb8c6'; c.lineWidth = 2; c.setLineDash([5, 5]); c.beginPath();
+      for (var rj = 0; rj <= 60; rj++) {
+        var rx = xmin + (xmax - xmin) * rj / 60;
+        if (!rj) c.moveTo(X(rx), Y(fnRef(rx))); else c.lineTo(X(rx), Y(fnRef(rx)));
+      }
+      c.stroke(); c.restore();
+    }
     c.beginPath();
-    for (var j = 0; j < vals.length; j++) {
+    for (var j = 0; j <= 60; j++) {
       var xx = xmin + (xmax - xmin) * j / 60;
-      if (j === 0) c.moveTo(X(xx), Y(vals[j])); else c.lineTo(X(xx), Y(vals[j]));
+      if (!j) c.moveTo(X(xx), Y(fn(xx))); else c.lineTo(X(xx), Y(fn(xx)));
     }
     c.strokeStyle = '#e8a06f'; c.lineWidth = 3; c.stroke();
     var px = X(curX), py = Y(fn(curX));
+    c.save(); c.strokeStyle = '#e8b884'; c.setLineDash([4, 3]);
+    c.beginPath(); c.moveTo(px, py); c.lineTo(px, B); c.stroke(); c.restore();
     c.beginPath(); c.arc(px, py, 10, 0, Math.PI * 2); c.fillStyle = 'rgba(255,179,186,.4)'; c.fill();
     c.beginPath(); c.arc(px, py, 5, 0, Math.PI * 2); c.fillStyle = '#e0606c'; c.fill();
-    c.strokeStyle = '#e8b884'; c.setLineDash([4, 3]);
-    c.beginPath(); c.moveTo(px, py); c.lineTo(px, B); c.stroke(); c.setLineDash([]);
     c.fillStyle = '#8b95a3'; c.font = '12px sans-serif';
     c.fillText('Δx/mm', 4, Tp + 6); c.fillText(label, R - 30, B + 20);
+    c.fillText('— 当前 ┄ 变化前', L + 6, Tp + 10);
     c.fillStyle = '#c1616c'; c.font = 'bold 12px sans-serif';
     c.fillText(fmt(fn(curX), 2), Math.min(px + 8, R - 34), Math.max(py - 8, Tp + 12));
   }
@@ -446,7 +474,7 @@
     function measure() {
       if (st.marks.length === 2) {
         var m = Math.abs(st.marks[1] - st.marks[0]);
-        var dx = dxOf(550, st.d, st.L);
+        var dx = dxOf(st.mode === 'white' ? 550 : st.lambda, st.d, st.L);
         ro.meas.innerHTML = fmt(m, 2) + ' <small>mm</small>';
         ro.err.textContent = fmt(Math.abs(m - dx) / dx * 100, 1) + '%';
       } else {
@@ -479,7 +507,7 @@
   /* ---------------- 3 高考题型 ---------------- */
   function viewExam(ctx) {
     var on = ctx.on, fit = ctx.fit, win = ctx.win;
-    var st = { lambda: 650, d: 0.3, L: 2.0 };
+    var st = { lambda: 600, d: 0.3, L: 2.0 };   // 与滑块 value=600、题干与选项口径一致
     ctx.container.innerHTML =
       '<div class="ds-wrap">' +
         '<div class="ds-lead"><p>点击选项即时判定并查看解析。第 2 题可调参数，实时算出条纹间距。</p></div>' +
@@ -493,7 +521,7 @@
           '</div><div class="ds-explain" data-exp="1" hidden></div>' +
         '</div>' +
         '<div class="ds-q">' +
-          '<div class="ds-q__t">2．（计算）波长 λ = 600 nm、双缝间距 d = 0.3 mm、缝屏距离 L = 2 m，条纹间距 Δx 约为多少？</div>' +
+          '<div class="ds-q__t" data-qt="2">2．（计算）波长 λ = 600 nm、双缝间距 d = 0.3 mm、缝屏距离 L = 2 m，条纹间距 Δx 约为多少？</div>' +
           '<div class="ds-bar" style="box-shadow:none;border:0;padding:12px 0">' +
             ctrlHtml('lambda', '波长 λ', 400, 700, 5, 600, 'nm') +
             ctrlHtml('d', '双缝间距 d', 0.1, 1, 0.01, 0.3, 'mm') +
@@ -511,9 +539,31 @@
     var $ = function (s) { return ctx.container.querySelector(s); };
     var exp = {
       '1': { right: 'A', text: 'Δx = Lλ/d，红光波长（约 650 nm）大于紫光（约 400 nm），故红光条纹更宽。' },
-      '2': { right: 'C', text: 'Δx = Lλ/d = 2 × 600×10⁻⁹ / (0.3×10⁻³) = 4×10⁻³ m = 4 mm。注意统一单位。' }
+      '2': { right: 'C', text: '' }
     };
-    function updateDx() { $('[data-dx]').textContent = fmt(dxOf(st.lambda, st.d, st.L), 2); }
+    function updateDx() {
+      var dx = dxOf(st.lambda, st.d, st.L);
+      $('[data-dx]').textContent = fmt(dx, 2);
+      // 题干、选项与正确答案随三个滑块动态生成
+      $('[data-qt="2"]').textContent = '2．（计算）波长 λ = ' + fmt(st.lambda, 0) + ' nm、双缝间距 d = '
+        + fmt(st.d, 2) + ' mm、缝屏距离 L = ' + fmt(st.L, 1) + ' m，条纹间距 Δx 约为多少？';
+      var cand = [dx], extra = [dx / 2, dx * 2, dx / 4, dx * 4, 1, 2, 4, 8];
+      function push(v) {
+        for (var z = 0; z < cand.length; z++) if (Math.abs(cand[z] - v) < 0.01) return;
+        if (cand.length < 4) cand.push(v);
+      }
+      for (var i = 0; i < extra.length && cand.length < 4; i++) push(extra[i]);
+      var letters = ['A', 'B', 'C', 'D'];
+      for (var k = 0; k < 4; k++) {
+        $('[data-q="2"] [data-ans="' + letters[k] + '"]').textContent = letters[k] + '．' + fmt(cand[k], 2) + ' mm';
+        if (Math.abs(cand[k] - dx) < 0.01) exp['2'].right = letters[k];
+      }
+      exp['2'].text = 'Δx = Lλ/d = ' + fmt(st.L, 1) + ' × ' + fmt(st.lambda, 0) + ' nm / ' + fmt(st.d, 2)
+        + ' mm = ' + fmt(dx, 2) + ' mm，应选 ' + exp['2'].right + '。注意统一单位（λ 取 nm、d 取 mm 时结果需 ×10⁻³）。';
+      var box = $('[data-q="2"]');
+      Array.prototype.forEach.call(box.querySelectorAll('.ds-opt'), function (x) { x.classList.remove('is-right', 'is-wrong'); });
+      $('[data-exp="2"]').hidden = true;
+    }
     bindCtrls(ctx, st, updateDx); updateDx();
     Array.prototype.forEach.call(ctx.container.querySelectorAll('[data-q]'), function (box) {
       var q = box.getAttribute('data-q');
