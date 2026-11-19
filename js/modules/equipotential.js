@@ -111,7 +111,7 @@
     var s={type:saved.type,E:saved.E,show:saved.show,playing:saved.playing};
     container.innerHTML=build(idx,s);
     var v=view(1000,430);container.querySelector('[data-cv]').appendChild(v.el);
-    var ctx=v.ctx,W=v.w,H=v.h,LST={},rAF=0,last=0,dead=false;
+    var ctx=v.ctx,W=v.w,H=v.h,LST={},rAF=0,last=0,dead=false,animT=0;
     var pts={p:{x:-.45,y:.45},a:{x:-.9,y:.55},b:{x:.9,y:-.45}},drag=null;
     var q=function(x){return container.querySelector(x);},qa=function(x){return container.querySelectorAll(x);};
     function map(x,y){var pad=15,pw=W-30,ph=H-30,sc=Math.min(pw/(2*XW),ph/(2*YW));return{X:W/2+x*sc,Y:H/2-y*sc,sc:sc};}
@@ -123,7 +123,7 @@
     q('[data-o="E"]').textContent=nf(s.E);
     for(var gi=0;gi<qa('[data-seg]').length;gi++){(function(box){on(LST,box,'click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(!b)return;var n=box.getAttribute('data-seg'),val=b.getAttribute('data-val');s[n]=val;setSeg(n,val);sync();resetQuiz();});})(qa('[data-seg]')[gi]);}
     var pb=q('[data-play]');on(LST,pb,'click',function(){s.playing=!s.playing;pb.textContent=s.playing?'⏸ 暂停':'▶ 播放';sync();});
-    on(LST,q('[data-reset]'),'click',function(){pts.p={x:-.45,y:.45};pts.a={x:-.9,y:.55};pts.b={x:.9,y:-.45};});
+    on(LST,q('[data-reset]'),'click',function(){pts.p={x:-.45,y:.45};pts.a={x:-.9,y:.55};pts.b={x:.9,y:-.45};animT=0;});
     function pos(e){var r=v.el.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
     function down(e){var P=pos(e),names=idx===2?['a','b']:['p'],best=null,bd=1e9;
       for(var i=0;i<names.length;i++){var sc=map(pts[names[i]].x,pts[names[i]].y).sc,dx=P.X-sc?0:0;var m=map(pts[names[i]].x,pts[names[i]].y),d=Math.hypot(P.X-m.X,P.Y-m.Y);if(d<bd){bd=d;best=names[i];}}
@@ -191,7 +191,12 @@
         }else if(s.type==='dipole'){
           for(var k=0;k<14;k++){var th=Math.PI*2*k/14,r0=.14,x=PS[0]+r0*Math.cos(th),y=r0*Math.sin(th);integrate(x,y,1);}
         }else{
-          for(var k2=0;k2<18;k2++){var t2=Math.PI*2*k2/18,x2=Math.cos(t2)*.14,y2=Math.sin(t2)*.14;var rr=map(x2,y2),far=map(x2*10*Math.cos(t2),y2*10*Math.sin(t2));line(rr.X,rr.Y,far.X,far.Y);arrow(ctx,map(x2*2.1*Math.cos(t2),y2*2.1*Math.sin(t2)).X,map(x2*2.1*Math.cos(t2),y2*2.1*Math.sin(t2)).Y,map(x2*2.6*Math.cos(t2),y2*2.6*Math.sin(t2)).X,map(x2*2.6*Math.cos(t2),y2*2.6*Math.sin(t2)).Y,C.skyD);}
+          for(var k2=0;k2<18;k2++){var t2=Math.PI*2*k2/18,ct=Math.cos(t2),st=Math.sin(t2),R0=.14,RF=Math.min(XW,YW)*.9;
+            var rr=map(R0*ct,R0*st),far=map(RF*ct,RF*st);line(rr.X,rr.Y,far.X,far.Y);
+            // 正电荷电场线由内向外；负电荷指向电荷，由外向内
+            var rA=s.type==='point-'?R0*2.6:R0*2.1,rB=s.type==='point-'?R0*2.1:R0*2.6;
+            var pa=map(rA*ct,rA*st),pb=map(rB*ct,rB*st);
+            arrow(ctx,pa.X,pa.Y,pb.X,pb.Y,C.skyD);}
         }
         ctx.restore();
         function line(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
@@ -221,7 +226,15 @@
       }
       label(ctx,'E₀ = '+nf(s.E),18,24,C.ink3);
     }
-    function frame(){if(dead)return;draw();
+    function frame(ts){if(dead)return;
+      var dt=last?Math.min(.05,(ts-last)/1000):0;last=ts;
+      // 播放按钮驱动探测点巡游：读数、场矢量与 quizData 都随之变化
+      if(s.playing&&!drag&&idx!==2){
+        animT+=dt;
+        var nx=pts.p.x+0.42*Math.cos(animT*.8)*dt,ny=pts.p.y+0.42*Math.sin(animT*.53)*dt;
+        pts.p={x:Math.max(-XW+.15,Math.min(XW-.15,nx)),y:Math.max(-YW+.15,Math.min(YW-.15,ny))};
+      }
+      draw();
       var P=pts[idx===2?'a':'p'],F=fieldAt(P.x,P.y,s.type,s.E),L=Math.hypot(F.x,F.y);
       var set=function(k,v){var e=q('[data-r="'+k+'"]');if(e)e.textContent=v;};
       set('E',nf(L));set('phi',nf(phi(P.x,P.y,s.type,s.E))+' V');set('Ex',nf(F.x));set('Ey',nf(F.y));
