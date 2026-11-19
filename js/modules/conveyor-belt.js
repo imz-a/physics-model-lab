@@ -73,15 +73,15 @@ input.cb-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
 
   NS.modules['conveyor-belt']={render:function(container,extIndex){
     extIndex=extIndex|0;if(extIndex<0||extIndex>3)extIndex=0;
-    var intro=['摩擦力驱动物块 <b>追上带速</b>','相对位移 <b>Δs</b> 决定生热','<b>Q = ½mΔv²</b> · 与 μ 无关','共速时间 <b>t = Δv/μg</b>'][extIndex];
+    var intro=['摩擦力使物块速度 <b>趋于带速</b>','相对位移 <b>Δs</b> 决定生热','<b>Q = ½mΔv²</b> · 与 μ 无关','共速时间 <b>t = Δv/μg</b>'][extIndex];
     var extra=extIndex===2
-      ?'<div class="cb-card"><div class="cb-hd"><h4>能量损耗</h4><small>Q + ΔEk = 电机做功</small></div>'
+      ?'<div class="cb-card"><div class="cb-hd"><h4>能量损耗</h4><small data-wtitle>Q + ΔEk = 电机做功</small></div>'
         +['Q|摩擦生热|#D0C4E8','dek|动能增量|#FFD8A8','W|电机做功|#B8E8D0'].map(function(s){var p=s.split('|');return'<div class="cb-barrow"><span>'+p[1]+'</span><div class="cb-bartrack"><div class="cb-barfill" data-bar="'+p[0]+'" style="background:'+p[2]+'"></div></div><b class="cb-barval" data-barval="'+p[0]+'">—</b></div>';}).join('')
-        +'<div class="cb-tip">Q = ½m(v带−v₀)² 与 μ 无关；μ 越大，共速越快、相对位移越小。</div></div>'
+        +'<div class="cb-tip">Q = ½m(v带−v₀)² 与 μ 无关；μ 越大，共速越快、相对位移越小。当 v₀ &gt; v带 时物块反拖电机，W = Q + ΔEk &lt; 0（负功），生热仍为正。</div></div>'
       :extIndex===3?quizHTML():'';
-    var chartTitle=['v–t 图像','相对位移（两线之间面积）','生热 Q 与 μ 的关系','v–t 突变与共速'][extIndex];
-    container.innerHTML=STYLE+'<div class="cb-wrap"><div class="cb-intro"><span class="cb-chip hot">'+intro+'</span><span class="cb-chip">f = μmg</span><span class="cb-chip">读数为示意值</span></div>'
-      +'<div class="cb-grid"><div><div class="cb-card"><div class="cb-hd"><h4>传送带演示</h4><small>物块在摩擦下追上带速</small></div><canvas class="cb-cv" data-cv="stage"></canvas>'
+    var chartTitle=['v–t 图像','相对位移（两线之间面积）','生热 Q 与 μ 的关系','v–t 图像（共速时刻）'][extIndex];
+    container.innerHTML=STYLE+'<div class="cb-wrap"><div class="cb-intro"><span class="cb-chip hot">'+intro+'</span><span class="cb-chip">f = μmg</span><span class="cb-chip">读数为全过程值</span></div>'
+      +'<div class="cb-grid"><div><div class="cb-card"><div class="cb-hd"><h4>传送带演示</h4><small>物块在摩擦下趋于带速</small></div><canvas class="cb-cv" data-cv="stage"></canvas>'
       +'<div class="cb-legend"><span><i style="background:#FFD8A8"></i>传送带</span><span><i style="background:#FFB3BA"></i>物块</span><span><i style="background:#B8E8D0"></i>带上的标记点</span></div></div>'
       +'<div class="cb-card"><div class="cb-hd"><h4>'+chartTitle+'</h4><small>随参数实时更新</small></div><canvas class="cb-cv chart" data-cv="chart"></canvas></div></div>'
       +'<div><div class="cb-card"><div class="cb-hd"><h4>参数调节</h4><small>拖动即时改变</small></div>'
@@ -89,7 +89,7 @@ input.cb-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         .map(function(r){return'<div class="cb-ctrl"><label><span>'+r[1]+'</span><b><span data-out="'+r[0]+'">'+r[5]+'</span> '+r[6]+'</b></label><input class="cb-range" type="range" data-slider="'+r[0]+'" min="'+r[2]+'" max="'+r[3]+'" step="'+r[4]+'" value="'+r[5]+'"></div>';}).join('')
       +'<div class="cb-btns"><button type="button" class="cb-btn main" data-btn="toggle">暂停</button><button type="button" class="cb-btn" data-btn="reset">重新放置</button></div></div>'
       +'<div class="cb-card"><div class="cb-hd"><h4>实时读数</h4><small>随运动刷新</small></div><div class="cb-reads">'
-      +[['t','当前时间 t / s',1],['v','物块速度 / (m/s)',1],['teq','共速时间 / s',1],['rel','相对位移 Δs / m',0],['Q','生热 Q / J',0],['W','电机做功 / J',0]]
+      +[['t','当前时间 t / s',1],['v','物块速度 / (m/s)',1],['teq','共速时间 / s',1],['rel','相对位移 Δs（全过程）/ m',0],['Q','生热 Q（全过程）/ J',0],['W','电机做功 W（全过程）/ J',0]]
         .map(function(r){return'<div class="cb-read'+(r[2]?' hl':'')+'"><span>'+r[1]+'</span><b data-read="'+r[0]+'">—</b></div>';}).join('')
       +'</div><div class="cb-tip">滑动摩擦力 f = μmg 恒定，a = μg；达到带速后相对静止，摩擦力消失。</div></div>'+extra+'</div></div></div>';
     var q=function(s){return container.querySelector(s);},qa=function(s){return container.querySelectorAll(s);};
@@ -100,12 +100,16 @@ input.cb-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
     function a(){var dv=st.vb-st.v0;if(Math.abs(dv)<1e-6)return 0;return Math.sign(dv)*st.mu*G;}
     function teq(){return Math.abs(st.vb-st.v0)/(st.mu*G);}
     function curV(){var t=Math.min(st.t,teq());return st.v0+a()*t;}
-    function sBlock(t){t=Math.min(t,teq());return st.v0*t+.5*a()*t*t+Math.max(0,t-teq())*st.vb;}
+    // 共速后物块随带匀速：必须保留 (t−T)·v带 项，不能把 t 提前 clamp 掉
+    function sBlock(t){var T=teq();if(t<=T)return st.v0*t+.5*a()*t*t;return st.v0*T+.5*a()*T*T+(t-T)*st.vb;}
     function rel(){var T=teq();return Math.abs(st.vb*T-sBlock(T));}
     function heat(){return st.mu*st.mass*G*rel();}
-    function motorW(){return st.mu*st.mass*G*st.vb*teq();}
+    // v₀>v带 时物块相对带向前，摩擦反拖电机 → 电机做负功
+    function motorW(){return Math.sign(st.vb-st.v0)*st.mu*st.mass*G*st.vb*teq();}
     function dEk(){return .5*st.mass*(st.vb*st.vb-st.v0*st.v0);}
-    qa('[data-slider]').forEach(function(el){var k=el.getAttribute('data-slider');on(el,'input',function(){st[k]=parseFloat(el.value);q('[data-out="'+k+'"]').textContent=(k==='mu'||k==='v0'||k==='vb')?st[k].toFixed(1):String(st[k]);reset();});});
+    // 「变化前」基准：只在 m、v带、v₀ 改变时刷新；单独调 μ 时基准与当前 Q 重合
+    var refQ=heat();
+    qa('[data-slider]').forEach(function(el){var k=el.getAttribute('data-slider');on(el,'input',function(){if(k!=='mu')refQ=heat();st[k]=parseFloat(el.value);q('[data-out="'+k+'"]').textContent=(k==='mu'||k==='v0'||k==='vb')?st[k].toFixed(1):String(st[k]);reset();});});
     var tg=q('[data-btn="toggle"]');on(tg,'click',function(){st.running=!st.running;tg.textContent=st.running?'暂停':'继续';tg.classList.toggle('main',st.running);});
     on(q('[data-btn="reset"]'),'click',reset);
     if(extIndex===3){
@@ -123,7 +127,7 @@ input.cb-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       c.fillStyle='#FFD8A8';for(var x=12-off;x<w-10;x+=36)c.fillRect(x,by-13,18,26);
       // 滚轮
       for(var wx=26;wx<w-16;wx+=64){dot(c,wx,by+25,8,'#fff','#BFE3F5');}
-      var scale=Math.min(24,(w-100)/Math.max(8,st.vb*3));
+      var scale=Math.min(24,(w-100)/20);       // 固定绝对位移量程，不随 v带 归一化
       var bx=54+sBlock(st.t)*scale;
       if(bx>w-60)reset(),bx=54;
       c.save();c.fillStyle='#FFB3BA';c.strokeStyle='#f28f9a';c.lineWidth=2;c.beginPath();c.rect(bx-18,by-40,36,24);c.fill();c.stroke();c.restore();
@@ -137,28 +141,52 @@ input.cb-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
     }
     function drawChart(){
       fit(chart);var c=chart.ctx,w=chart.w,h=chart.h;if(!w||!h)return;c.clearRect(0,0,w,h);
-      var x0=36,x1=w-14,top=14,bot=h-24,T=Math.max(1.2,teq()*1.5);
+      var x0=42,x1=w-14,top=16,bot=h-28,T=Math.max(1.2,teq()*1.5);
       line(c,x0,bot,x1,bot,'#cbd6e2',1);line(c,x0,top,x0,bot,'#cbd6e2',1);
-      var vmax=Math.max(st.vb,st.v0)*1.15;
-      function px(t){return x0+t/T*(x1-x0);}function py(v){return bot-v/vmax*(bot-top);}
+      function clamp01(u){return Math.max(0,Math.min(1,u));}
+      function frame(xlab,ylab){text(c,xlab,x1,h-8,'#8b95a3',11,'right');text(c,ylab,x0+2,top+4,'#8b95a3',10);text(c,'0',x0-4,bot+1,'#aab4c0',10,'right');}
+      function px(t){return x0+clamp01(t/T)*(x1-x0);}
       if(extIndex===2){
-        c.save();c.beginPath();
-        for(var i=0;i<=50;i++){var m=.05+.75*i/50,y=bot-(.5*st.mass*Math.pow(st.vb-st.v0,2))/Math.max(1,20)*(bot-top);if(i===0)c.moveTo(px(m*8),y);else c.lineTo(px(m*8),y);}c.strokeStyle='#D0C4E8';c.lineWidth=2.5;c.stroke();c.restore();
-        text(c,'Q = ½mΔv²，水平线说明与 μ 无关',x0+6,top+8,'#8b6fb0',11);return;
+        // μ 图：横轴是 μ（0.05~0.8），纵轴用固定绝对量程 Qref（由滑块极限决定）
+        var Qref=.5*5*10*10;   // 固定绝对量程 250 J（m≤5 kg、Δv≤10 m/s 的滑块极限）
+        function pxMu(m){return x0+(m-.05)/.75*(x1-x0);}
+        function pyQ(q){return bot-clamp01(q/Qref)*(bot-top);}
+        frame('动摩擦因数 μ','Q / J');
+        [0.05,0.2,0.35,0.5,0.65,0.8].forEach(function(m){var X=pxMu(m);line(c,X,bot,X,bot+4,'#cbd6e2',1);text(c,m.toFixed(2),X,bot+12,'#aab4c0',9,'center');});
+        text(c,'0',x0-4,bot,'#aab4c0',10,'right');text(c,Qref.toFixed(0),x0-4,top+4,'#aab4c0',10,'right');
+        line(c,x0,pyQ(refQ),x1,pyQ(refQ),'#b9c2cc',2,[5,4]);   // 变化前灰色虚线基准
+        text(c,'变化前 Q='+refQ.toFixed(1)+' J',x0+6,pyQ(refQ)-9,'#9aa4b0',10);
+        line(c,x0,pyQ(heat()),x1,pyQ(heat()),'#D0C4E8',2.5);
+        text(c,'Q = ½mΔv² = '+heat().toFixed(1)+' J',x0+6,pyQ(heat())+9,'#8b6fb0',10);
+        text(c,'水平线说明 Q 与 μ 无关（仅调 μ 时与灰虚线重合）',(x0+x1)/2,top+4,'#8b6fb0',10,'center');
+        return;
       }
-      line(c,x0,py(st.vb),x1,py(st.vb),'#BFE3F5',2,[5,4]);text(c,'v带',x1-2,py(st.vb)-10,'#6fa9cc',11,'right');
-      c.save();c.beginPath();c.moveTo(x0,py(st.v0));c.lineTo(px(Math.min(T,teq())),py(st.vb));c.lineTo(x1,py(st.vb));c.strokeStyle='#FFB3BA';c.lineWidth=2.5;c.stroke();c.restore();
-      if(extIndex===1){
-        c.save();c.beginPath();c.moveTo(x0,py(st.v0));c.lineTo(px(teq()),py(st.vb));c.lineTo(px(teq()),py(st.vb));c.lineTo(x0,py(st.vb));c.closePath();c.fillStyle='rgba(184,232,208,.45)';c.fill();c.restore();
-        text(c,'阴影面积 = 相对位移 Δs',x0+8,top+8,'#5cae86',11);
-      }
+      var vAxis=Math.max(2,Math.ceil(Math.max(st.vb,st.v0)*1.15/2)*2); // 固定绝对速度刻度（取整档）
+      function py(v){return bot-clamp01(v/vAxis)*(bot-top);}
+      frame('t / s','v / (m/s)');
+      text(c,String(vAxis),x0-4,top+4,'#aab4c0',10,'right');text(c,T.toFixed(1),x1,bot+12,'#aab4c0',10,'right');
+      line(c,x0,py(st.v0),x1,py(st.v0),'#e3e8ee',1,[4,4]);   // v₀ 初值参考
+      text(c,'v₀='+st.v0.toFixed(1),x0+4,py(st.v0)-8,'#aab4c0',10);
+      line(c,x0,py(st.vb),x1,py(st.vb),'#BFE3F5',2,[5,4]);text(c,'v带='+st.vb.toFixed(1),x1-2,py(st.vb)-9,'#6fa9cc',11,'right');
+      var Te=Math.min(T,teq());
+      c.save();c.beginPath();c.moveTo(x0,py(st.v0));c.lineTo(px(Te),py(st.vb));c.lineTo(x1,py(st.vb));c.lineTo(px(Te),py(st.vb));c.lineTo(x0,py(st.v0));c.closePath();c.fillStyle='rgba(184,232,208,.35)';c.fill();c.restore();
+      c.save();c.beginPath();c.moveTo(x0,py(st.v0));c.lineTo(px(Te),py(st.vb));c.lineTo(x1,py(st.vb));c.strokeStyle='#FFB3BA';c.lineWidth=2.5;c.stroke();c.restore();
+      line(c,px(Te),top,px(Te),bot,'#D0C4E8',1,[3,3]);
+      text(c,'共速 t='+teq().toFixed(2)+' s',px(Te)+5,top+10,'#8b6fb0',10);
+      if(extIndex===3)text(c,'共速后摩擦力 f 突变为 0',px(Te)+5,top+24,'#8b6fb0',10);
+      if(extIndex===1)text(c,'阴影面积 = 相对位移 Δs',x0+8,bot-12,'#5cae86',10);
       var tnow=Math.min(st.t,T);line(c,px(tnow),top,px(tnow),bot,'#e8edf2',1,[3,3]);dot(c,px(tnow),py(curV()),5,'#FFB3BA','#fff');
-      text(c,'t/s',x1,h-8,'#8b95a3',11,'right');text(c,'v',x0+3,top+4,'#8b95a3',11);
+      text(c,'— 物块 v',x1-4,top+4,'#FFB3BA',10,'right');text(c,'- - 带速 v带',x1-4,top+17,'#6fa9cc',10,'right');
     }
     function set(k,v){var e=q('[data-read="'+k+'"]');if(e)e.textContent=v;}
     function update(){
       set('t',st.t.toFixed(2));set('v',curV().toFixed(2));set('teq',teq().toFixed(2));set('rel',rel().toFixed(2));set('Q',heat().toFixed(1));set('W',motorW().toFixed(1));
-      if(extIndex===2){var mx=Math.max(1,motorW()),vals={Q:heat(),dek:dEk(),W:motorW()};Object.keys(vals).forEach(function(k){var b=q('[data-bar="'+k+'"]'),v=q('[data-barval="'+k+'"]');if(b)b.style.width=Math.min(100,vals[k]/mx*100).toFixed(1)+'%';if(v)v.textContent=vals[k].toFixed(1);});}
+      if(extIndex===2){
+        var wt=q('[data-wtitle]'),W=motorW();
+        if(wt)wt.textContent=W<0?'物块带动传送带，电机做负功（被反拖）：Q + ΔEk = W':'Q + ΔEk = 电机做功';
+        var mx=Math.max(1,Math.abs(heat()),Math.abs(dEk()),Math.abs(W)),vals={Q:heat(),dek:dEk(),W:W};
+        Object.keys(vals).forEach(function(k){var b=q('[data-bar="'+k+'"]'),v=q('[data-barval="'+k+'"]');if(b)b.style.width=Math.min(100,Math.abs(vals[k])/mx*100).toFixed(1)+'%';if(v)v.textContent=vals[k].toFixed(1);});
+      }
     }
     var raf=0;
     function loop(now){if(!st.last)st.last=now;var dt=Math.min(.04,(now-st.last)/1000);st.last=now;if(st.running){st.t+=dt;if(st.t>teq()+2.5)reset();}drawStage();drawChart();update();raf=global.requestAnimationFrame(loop);}
