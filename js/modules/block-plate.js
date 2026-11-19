@@ -145,8 +145,9 @@ input.bp-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       return{v1:st.v0+th.init.a1*t,v2:th.init.a2*t};
     }
     // v–t 两线之间阴影面积 = 相对滑动距离 L；Q = f·L = μm₁g·L
+    // 对全过程 |v1−v2| 积分：共速后静摩擦不足、摩擦反向继续滑动的这一段同样生热，不能截断在 tc0
     function slideHeat(){
-      var th=theory(),tEnd=th.tc0>0?Math.min(th.tc0,th.T):th.T,L=0,N=160,prev=Math.abs(st.v0);
+      var th=theory(),tEnd=th.T,L=0,N=160,prev=Math.abs(st.v0);
       for(var i=1;i<=N;i++){var t=tEnd*i/N,vv=theoryV(t),vr=Math.abs(vv.v1-vv.v2);L+=(prev+vr)/2*(tEnd/N);prev=vr;}
       return{L:L,Q:th.f*L,tEnd:tEnd};
     }
@@ -292,7 +293,7 @@ input.bp-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       var tip=q('[data-tip]'),base=st.on==='lower'
         ?'设 v₁>v₂（F 作用于木板）：上块受摩擦向左 a₁=−f/m₁=−μg，木板受摩擦向右 a₂=(F+f)/m₂；若 v₂>v₁ 摩擦反向：a₁=+f/m₁，a₂=(F−f)/m₂。'
         :'设 v₁>v₂（F 作用于上块）：上块 a₁=(F−f)/m₁，木板 a₂=f/m₂；若 v₂>v₁ 摩擦反向：a₁=(F+f)/m₁，a₂=−f/m₂。';
-      if(tip)tip.textContent=base+'共速后需「维持一起运动的静摩擦」≤ fₘ 才一起运动，否则摩擦反向、继续滑动；相对加速度取大小 |a₁−a₂|，L 为 v–t 阴影面积，Q=f·L=μm₁g·L。';
+      if(tip)tip.textContent=base+'共速后需「维持一起运动的静摩擦」≤ fₘ 才一起运动，否则摩擦反向、继续滑动；相对加速度取大小 |a₁−a₂|，L 为全过程 v–t 阴影面积（含共速后反向滑动段），Q=f·L=μm₁g·L。';
       if(extIndex===1){
         var stt=q('[data-status]');
         if(stt){stt.className='bp-status'+(d.slip?' slip':'');
