@@ -8,6 +8,9 @@
   var doc=global.document;
   var C={ink:'#3a4250',ink2:'#5a6472',ink3:'#8b95a3',pinkD:'#E27886',mintD:'#57A47F',skyD:'#5B9BC4',lavD:'#8A76BB',peachD:'#D69A55'};
   var saved={B:0.8,L:0.2,v:1.0,R:2.0,Wf:0.5,playing:true};
+  var DEFAULTS={B:0.8,L:0.2,v:1.0,R:2.0,Wf:0.5}; // 变化前基准（固定，不受滑块改写）
+  var EMF_AXIS=2.6;  // 固定纵轴量程：B=2T,L=0.4m,v=3m/s → ε=2.4V，留余量
+  var T_AXIS=5.2;    // 固定横轴量程：tCut≤min(0.4,0.8)/0.3≈1.33s，tHold≤0.7/0.3≈2.33s，T≤5s
   var SID='ml-lf-style';
   var CSS=''
     +'.lf-w{display:flex;flex-direction:column;gap:14px;font-size:16px;color:var(--ink,#3a4250)}.lf-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}'
@@ -35,15 +38,20 @@
   function quiz(){return '<div class="lf-qz"><h5>第 1 题 · 电流方向</h5><div data-qt="1"></div><div class="lf-opts" data-op="1"></div><button class="lf-btn" data-sub="1">提交答案</button><div class="lf-fb" data-fb="1" hidden></div><h5>第 2 题 · 焦耳热</h5><div data-qt="2"></div><div class="lf-in"><input type="number" step="any" data-num placeholder="输入数值"><span data-unit></span><button class="lf-btn" data-sub="2">提交答案</button></div><div class="lf-fb" data-fb="2" hidden></div></div>';}
   function calc(s,xc){
     var lw=s.L*10,fw=s.Wf*10,xf=3,total=lw+fw+3.4;
-    var enter=xc<xf&&xc+lw>xf,exit=xc>xf&&xc<xf+fw&&xc+lw>xf+fw;
-    var phase=enter?'进入':exit?'穿出':((xc>=xf&&xc+lw<=xf+fw)?'完全在内':'未进入/已离开');
+    var re=xc+lw; // 线框右边界
+    // enter：右边界进入左边界、尚未穿出右边界；exit：左边界进入、右边界已穿出
+    // 仅这两个阶段重叠宽度在变（dΦ/dt≠0）；否则磁通恒定，ε=0
+    var enter=xc<xf&&re>xf&&re<=xf+fw;
+    var exit=xc>xf&&xc<xf+fw&&re>xf+fw;
+    var overlap=Math.max(0,Math.min(re,xf+fw)-Math.max(xc,xf));
+    var phase=enter?'进入':exit?'穿出':overlap>0?(fw<lw?'磁场被完全覆盖':'完全在内'):'未进入/已离开';
     var emf=(enter||exit)?s.B*s.L*s.v:0,I=emf/s.R,F=s.B*I*s.L,P=I*I*s.R;
     return{lw:lw,fw:fw,xf:xf,total:total,phase:phase,emf:emf,I:I,F:F,P:P,enter:enter,exit:exit};
   }
   function build(idx,s){
     var ex='';
-    if(idx===1)ex='<div class="lf-card"><div class="lf-t"><i style="background:var(--sky,#BFE3F5)"></i>ε — t 分段图像</div><div data-chart></div><div class="lf-rel"><div><span>进入段时长 L/v</span><b data-r="tin">—</b></div><div><span>中间为零的时长 (w−L)/v</span><b data-r="tmid">—</b></div><div><span>进入段电动势 ε</span><b data-r="eplot">—</b></div></div><div class="lf-n">进入与穿出两段是等高的正负平台，线框完全在磁场中时磁通量不变，ε=0。</div></div>'
-      +'<div class="lf-card"><div class="lf-t"><i style="background:var(--lav,#D0C4E8)"></i>图像判读要点</div><div class="lf-f">① 只有"切割边界"的时段才有感应电动势；<br>② 进入与穿出的 ε 大小相等、方向相反；<br>③ 平台高度 ∝ B、L、v；平台宽度 ∝ L/v。<br>若磁场区比线框窄（w&lt;L），中间没有零平台。</div></div>';
+    if(idx===1)ex='<div class="lf-card"><div class="lf-t"><i style="background:var(--sky,#BFE3F5)"></i>ε — t 分段图像</div><div data-chart></div><div class="lf-rel"><div><span>切割段时长 min(L,w)/v</span><b data-r="tin">—</b></div><div><span>中间零平台时长 |w−L|/v</span><b data-r="tmid">—</b></div><div><span>平台高度 ε = BLv</span><b data-r="eplot">—</b></div></div><div class="lf-n">进入与穿出两段是等高的正负平台；中间零平台对应磁通量不变：w&gt;L 时线框完全在磁场内，w&lt;L 时磁场被线框完全覆盖。纵轴 ε/V 为固定量程，灰虚线为变化前基准。</div></div>'
+      +'<div class="lf-card"><div class="lf-t"><i style="background:var(--lav,#D0C4E8)"></i>图像判读要点</div><div class="lf-f">① 只有"切割边界"的时段才有感应电动势；<br>② 进入与穿出的 ε 大小相等、方向相反；<br>③ 平台高度 ∝ B、L、v（纵轴固定刻度，拖 B 可见平台升降）；平台宽度 ∝ min(L,w)/v。<br>磁场区比线框窄（w&lt;L）时，中间是"磁场被完全覆盖"的零平台。</div></div>';
     else if(idx===2)ex='<div class="lf-card"><div class="lf-t"><i style="background:var(--peach,#FFD8A8)"></i>能量转化 · 焦耳热</div>'
       +'<div class="lf-bar"><div class="lf-bar__t"><span>累计焦耳热 Q = ∫I²R dt</span><b data-barv="q">—</b></div><div class="lf-bar__k"><div class="lf-bar__f" data-bar="q" style="background:var(--peach,#FFD8A8)"></div></div></div>'
       +'<div class="lf-bar"><div class="lf-bar__t"><span>克服安培力做功 W = ∫F安 v dt</span><b data-barv="w">—</b></div><div class="lf-bar__k"><div class="lf-bar__f" data-bar="w" style="background:var(--mint,#B8E8D0)"></div></div></div>'
@@ -62,18 +70,38 @@
   }
   function arrow(ctx,x1,y1,x2,y2,c){var dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);if(L<3)return;var ux=dx/L,uy=dy/L,h=8;ctx.save();ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-ux*h-uy*h*.6,y2-uy*h+ux*h*.6);ctx.lineTo(x2-ux*h+uy*h*.6,y2-uy*h-ux*h*.6);ctx.closePath();ctx.fill();ctx.restore();}
   function label(ctx,t,x,y,c,al){ctx.save();ctx.font='15px "PingFang SC","Microsoft YaHei",sans-serif';ctx.fillStyle=c||C.ink3;ctx.textAlign=al||'left';ctx.fillText(t,x,y);ctx.restore();}
+  // 画ε-t波形：tCut=min(L,w)/v（切割段），tHold=|w-L|/v（零平台段），ε幅度=B·L·v
+  function wavePath(ctx,s,X,Y){
+    var tCut=Math.min(s.L,s.Wf)/s.v,tHold=Math.abs(s.Wf-s.L)/s.v,e=s.B*s.L*s.v,T=2*tCut+tHold;
+    ctx.beginPath();
+    ctx.moveTo(X(0),Y(0));ctx.lineTo(X(0),Y(e));ctx.lineTo(X(tCut),Y(e));ctx.lineTo(X(tCut),Y(0));
+    ctx.lineTo(X(tCut+tHold),Y(0));ctx.lineTo(X(tCut+tHold),Y(-e));ctx.lineTo(X(T),Y(-e));ctx.lineTo(X(T),Y(0));
+  }
   function chart(view,s,elapsed){
     var ctx=view.ctx,W=view.w,H=view.h;ctx.clearRect(0,0,W,H);
-    var tIn=s.L/s.v,tMid=Math.max(0,(s.Wf-s.L)/s.v),T=2*tIn+tMid,L=48,R=W-18,Tp=18,B=H-32,emf=s.B*s.L*s.v;
-    function X(t){return L+(R-L)*t/T;}function Y(v){return (Tp+B)/2-(B-Tp)/2*v/(emf*1.2);}
-    ctx.save();ctx.strokeStyle='#e8edf2';ctx.beginPath();ctx.moveTo(L,Tp);ctx.lineTo(L,B);ctx.lineTo(R,B);ctx.stroke();
-    ctx.strokeStyle='#f0f3f7';ctx.beginPath();ctx.moveTo(L,Y(0));ctx.lineTo(R,Y(0));ctx.stroke();ctx.restore();
-    ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.8;ctx.beginPath();
-    ctx.moveTo(X(0),Y(0));ctx.lineTo(X(0),Y(emf));ctx.lineTo(X(tIn),Y(emf));ctx.lineTo(X(tIn),Y(0));
-    ctx.lineTo(X(tIn+tMid),Y(0));ctx.lineTo(X(tIn+tMid),Y(-emf));ctx.lineTo(X(T),Y(-emf));ctx.lineTo(X(T),Y(0));ctx.stroke();ctx.restore();
-    var tc=Math.min(T,elapsed);ctx.save();ctx.strokeStyle=C.pinkD;ctx.lineWidth=1.8;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(X(tc),Tp);ctx.lineTo(X(tc),B);ctx.stroke();ctx.restore();
+    var L=54,R=W-18,Tp=18,B=H-32;
+    function X(t){return L+Math.min(1,t/T_AXIS)*(R-L);}
+    function Y(v){return (Tp+B)/2-(B-Tp)/2*v/EMF_AXIS;}
+    // 坐标轴
+    ctx.save();ctx.strokeStyle='#e8edf2';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(L,Tp);ctx.lineTo(L,B);ctx.lineTo(R,B);ctx.stroke();
+    // 纵轴刻度 ±ε
+    [1,0.5,0,-0.5,-1].forEach(function(k){var y=Y(k*EMF_AXIS);ctx.beginPath();ctx.moveTo(L-4,y);ctx.lineTo(L,y);ctx.stroke();label(ctx,(k*EMF_AXIS).toFixed(1),L-6,y,C.ink3,'right');});
+    // 横轴刻度 t/s
+    for(var t=0;t<=5;t+=1){var xx=X(t);ctx.beginPath();ctx.moveTo(xx,B);ctx.lineTo(xx,B+4);ctx.stroke();label(ctx,String(t),xx,B+15,C.ink3,'center');}
+    ctx.restore();
+    // 变化前虚线基准（默认参数）
+    ctx.save();ctx.strokeStyle='rgba(139,149,163,.55)';ctx.lineWidth=1.6;ctx.setLineDash([5,4]);
+    wavePath(ctx,DEFAULTS,X,Y);ctx.stroke();ctx.restore();
+    // 当前波形
+    ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.8;wavePath(ctx,s,X,Y);ctx.stroke();ctx.restore();
+    // 游标
+    var tc=Math.min(T_AXIS,elapsed),tCut=Math.min(s.L,s.Wf)/s.v,tHold=Math.abs(s.Wf-s.L)/s.v;
+    var cy=tc<tCut?1:tc<tCut+tHold?0:tc<2*tCut+tHold?-1:0;
+    ctx.save();ctx.strokeStyle=C.pinkD;ctx.lineWidth=1.8;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(X(tc),Tp);ctx.lineTo(X(tc),B);ctx.stroke();ctx.restore();
+    ctx.save();ctx.fillStyle=C.pinkD;ctx.beginPath();ctx.arc(X(tc),Y(cy*s.B*s.L*s.v),5,0,Math.PI*2);ctx.fill();ctx.restore();
     label(ctx,'ε / V',L-4,Tp+2,C.ink3,'right');label(ctx,'t / s',R,H-6,C.ink2,'right');
-    ctx.save();ctx.fillStyle=C.pinkD;ctx.beginPath();ctx.arc(X(tc),Y(Math.min(T,elapsed)<tIn?emf:Math.min(T,elapsed)>tIn+tMid?-emf:0),5,0,Math.PI*2);ctx.fill();ctx.restore();
+    label(ctx,'— 当前　┄ 变化前',L+6,Tp+10,C.mintD);
   }
 
   NS.modules['loop-entering-field']={render:function(container,extIndex){
@@ -100,7 +128,7 @@
       Q[2].ans=qtot;Q[2].unit='J';Q[2].expl='Q = 2·(B²L²v/R)·(L/v) = 2B²L³/R = 2×'+nf(s.B)+'²×'+nf(s.L)+'³/'+nf(s.R)+' = '+nf(qtot)+' J，与速度无关。';
     }
     function paintQuiz(){if(idx!==3)return;quizData();q('[data-qt="1"]').textContent=Q[1].text;q('[data-qt="2"]').textContent=Q[2].text;q('[data-unit]').textContent=Q[2].unit;var b=q('[data-op="1"]');b.innerHTML='';Q[1].opts.forEach(function(t,i){var x=doc.createElement('button');x.type='button';x.textContent=String.fromCharCode(65+i)+'. '+t;x.setAttribute('data-i',i);b.appendChild(x);});}
-    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');}}
+    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');paintQuiz();}}
     function submit(n){n=Number(n);var fb=q('[data-fb="'+n+'"]');if(n===1){if(sel<0){fb.className='lf-fb no';fb.hidden=false;fb.textContent='请先选择。';return;}var ok=sel===Q[1].correct;fb.className='lf-fb '+(ok?'ok':'no');fb.hidden=false;fb.innerHTML=(ok?'✅ 正确！':'❌ 再想想。')+Q[1].expl;}
       else{var val=Number(q('[data-num]').value),ok2=isFinite(val)&&Math.abs(val-Q[2].ans)<=Math.max(1e-4,Math.abs(Q[2].ans)*.06);fb.className='lf-fb '+(ok2?'ok':'no');fb.hidden=false;fb.innerHTML=(ok2?'✅ 正确！':'❌ 参考答案 '+nf(Q[2].ans)+' J。')+Q[2].expl;}}
     if(idx===3){paintQuiz();on(LST,q('[data-op="1"]'),'click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(!b)return;sel=Number(b.getAttribute('data-i'));var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.toggle('is-sel',i===sel);});for(var z=0;z<qa('[data-sub]').length;z++){(function(b){on(LST,b,'click',function(){submit(b.getAttribute('data-sub'));});})(qa('[data-sub]')[z]);}}
@@ -117,7 +145,8 @@
       label(ctx,'有界磁场 B='+nf(s.B)+' T，宽 '+nf(s.Wf)+' m',X(d.xf),ytop-32,C.lavD,'center');
       // 线框
       var x1=X(s.xc),x2=X(s.xc+d.lw);
-      ctx.save();ctx.strokeStyle=d.emf>0?C.pinkD:C.skyD;ctx.lineWidth=4;ctx.lineJoin='round';
+      var phaseCol=d.enter?C.pinkD:d.exit?C.skyD:C.ink3;
+      ctx.save();ctx.strokeStyle=phaseCol;ctx.lineWidth=4;ctx.lineJoin='round';
       ctx.strokeRect(x1,ytop,x2-x1,ybot-ytop);ctx.restore();
       if(d.enter||d.exit){
         var c=d.enter?C.pinkD:C.skyD;
@@ -126,7 +155,7 @@
         label(ctx,'I = '+nf(d.I)+' A',(x1+x2)/2,ytop-18,c,'center');
       }
       arrow(ctx,x1-70,(ytop+ybot)/2,x1-18,(ytop+ybot)/2,C.mintD);label(ctx,'v',x1-70,(ytop+ybot)/2-10,C.mintD);
-      label(ctx,d.phase,40,32,d.emf>0?C.pinkD:C.ink2);
+      label(ctx,d.phase,40,32,d.enter?C.pinkD:d.exit?C.skyD:C.ink2);
       label(ctx,'左边界 X=0',X(0),ybot+34,C.ink3,'center');label(ctx,'右边界',X(d.xf+d.fw),ybot+34,C.ink3,'center');
     }
     function frame(ts){if(dead)return;if(!last)last=ts;var dt=Math.min(.05,(ts-last)/1000);last=ts;
@@ -138,7 +167,9 @@
       var d=calc(s,s.xc);draw(d);
       var set=function(k,val){var e=q('[data-r="'+k+'"]');if(e)e.textContent=val;};
       set('ph',d.phase);set('emf',nf(d.emf));set('I',nf(d.I));set('F',nf(d.F));set('P',nf(d.P));set('Q',nf(s.Q));
-      if(idx===1){set('tin',nf(s.L/s.v)+' s');set('tmid',nf(Math.max(0,(s.Wf-s.L)/s.v))+' s');set('eplot',nf(s.B*s.L*s.v)+' V');chart(chartV,s,Math.max(0,s.t-(s.total?0:0))% (2*s.L/s.v+Math.max(0,(s.Wf-s.L)/s.v)));}
+      if(idx===1){var tCut=Math.min(s.L,s.Wf)/s.v,tHold=Math.abs(s.Wf-s.L)/s.v,per=2*tCut+tHold;
+        set('tin',nf(tCut)+' s');set('tmid',nf(tHold)+' s');set('eplot',nf(s.B*s.L*s.v)+' V');
+        chart(chartV,s,Math.max(0,s.t)%per);}
       if(idx===2){set('qtot',nf(2*s.B*s.B*s.L*s.L*s.L/s.R)+' J');var mx=Math.max(s.Q,s.W,1e-6);var f1=q('[data-bar="q"]'),f2=q('[data-bar="w"]'),t1=q('[data-barv="q"]'),t2=q('[data-barv="w"]');if(f1)f1.style.width=(s.Q/mx*100).toFixed(1)+'%';if(f2)f2.style.width=(s.W/mx*100).toFixed(1)+'%';if(t1)t1.textContent=nf(s.Q)+' J';if(t2)t2.textContent=nf(s.W)+' J';}
       var st=q('[data-status]');if(st)st.textContent=d.phase==='完全在内'?'磁通量不变，ε=0，无感应电流。':d.phase==='进入'?'右边切割，逆时针电流，安培力向左阻碍运动。':d.phase==='穿出'?'左边切割，顺时针电流，安培力仍向左阻碍。':'线框尚未进入磁场。';
       rAF=global.requestAnimationFrame(frame);
