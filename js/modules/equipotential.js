@@ -203,12 +203,24 @@
         for(i=0;i<N;i++)for(j=0;j<M;j++){
           var x0=-XW+2*XW*i/N,x1=-XW+2*XW*(i+1)/N,y0=-YW+2*YW*j/M,y1=-YW+2*YW*(j+1)/M;
           var a=grid[i][j],b=grid[i+1][j],c=grid[i+1][j+1],d=grid[i][j+1],cr=[];
-          function ip(v1,v2,t1,t2){var t=(L0-v1)/(v2-v1);return[t1+(t2-t1)*t,0];}
-          if((a-L0)*(b-L0)<0)cr.push(ip(a,b,x0,x1));
-          if((b-L0)*(c-L0)<0){var p=ip(b,c,y0,y1);cr.push([x1,p[0]]);}
-          if((c-L0)*(d-L0)<0)cr.push(ip(c,d,x1,x0));
-          if((d-L0)*(a-L0)<0){var p2=ip(d,a,y1,y0);cr.push([p2[0],y0]);}
-          if(cr.length>=2)out.push([cr[0][0],cr[0][1],cr[2]!==undefined?cr[2][0]:cr[1][0],cr[2]!==undefined?cr[2][1]:cr[1][1]]);
+          // ip 返回沿某条边的线性插值坐标（标量），由调用方补上该边固定的另一维坐标
+          function ip(v1,v2,t1,t2){var t=(L0-v1)/(v2-v1);return t1+(t2-t1)*t;}
+          if((a-L0)*(b-L0)<0)cr.push([ip(a,b,x0,x1),y0]);        // 底边：y=y0
+          if((b-L0)*(c-L0)<0)cr.push([x1,ip(b,c,y0,y1)]);        // 右边：x=x1
+          if((c-L0)*(d-L0)<0)cr.push([ip(c,d,x1,x0),y1]);        // 顶边：y=y1
+          if((d-L0)*(a-L0)<0)cr.push([x0,ip(d,a,y1,y0)]);        // 左边：x=x0
+          if(cr.length===2)out.push([cr[0][0],cr[0][1],cr[1][0],cr[1][1]]);
+          else if(cr.length===4){
+            // 鞍点：用中心电势与角 a 是否同侧决定配对，避免乱连
+            var center=phi((x0+x1)/2,(y0+y1)/2,s.type,s.E);
+            if((center-L0)*(a-L0)>0){
+              out.push([cr[0][0],cr[0][1],cr[1][0],cr[1][1]]);
+              out.push([cr[2][0],cr[2][1],cr[3][0],cr[3][1]]);
+            }else{
+              out.push([cr[0][0],cr[0][1],cr[3][0],cr[3][1]]);
+              out.push([cr[1][0],cr[1][1],cr[2][0],cr[2][1]]);
+            }
+          }
         }
       }
       return out;
