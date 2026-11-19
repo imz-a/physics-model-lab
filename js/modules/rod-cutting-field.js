@@ -383,7 +383,7 @@
       + '<div class="cpr-grid">'
       + '<div class="cpr-card"><div class="cpr-card__t"><i></i>U 型导轨中的导体棒'
       + '<span class="cpr-card__hint">橙色小点表示感应电流方向 · 棒长随 L 实时变化</span></div>'
-      + '<canvas data-canvas></canvas></div>'
+      + '<div data-canvas></div></div>'
       + '<div class="cpr-side">'
       + '<div class="cpr-card"><div class="cpr-card__t"><i style="background:var(--pink,#FFB3BA)"></i>参数调节</div>'
       + slider('B', '磁感应强度 B', 0.2, 2, 0.1, s.B, 'T')
