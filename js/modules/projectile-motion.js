@@ -214,8 +214,9 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
 
       var state = {
         v0: 12, h: 10, g: 9.8, E: 8, qch: 0.8, mm: 1,
-        field: 'both', running: true, t: 0, hold: 0, last: 0
+        field: 'both', fieldLabel: '重力+电场', running: true, t: 0, hold: 0, last: 0
       };
+      var FIELD_LABEL = { both: '重力+电场', gravity: '仅重力', electric: '仅电场' };
       function aGravity() { return state.g; }
       function aElectric() { return state.qch * state.E / state.mm; }
       function accel() {
@@ -229,10 +230,13 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       function relaunch() { state.t = 0; state.hold = 0; state.running = true; var b = q1('[data-btn="toggle"]'); if (b) b.textContent = '暂停'; }
 
       /* ---------- 控件 ---------- */
+      // 变化前的完整轨迹参数，舞台与 y–x 图都用灰虚线叠加对照
+      var refPath = { v0: state.v0, a: accel(), tf: Tf() };
       qa('[data-slider]').forEach(function (el) {
         var key = el.getAttribute('data-slider');
         on(el, 'input', function () {
           var v = parseFloat(el.value);
+          refPath = { v0: state.v0, a: accel(), tf: Tf() };
           state[key] = v;
           var out = q1('[data-out="' + key + '"]');
           if (out) out.textContent = (key === 'g' || key === 'qch' || key === 'mm') ? v.toFixed(1) : String(v);
@@ -248,7 +252,9 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       on(q1('[data-btn="relaunch"]'), 'click', relaunch);
       qa('[data-field]').forEach(function (el) {
         on(el, 'click', function () {
+          refPath = { v0: state.v0, a: accel(), tf: Tf() };
           state.field = el.getAttribute('data-field');
+          state.fieldLabel = FIELD_LABEL[state.field] || state.field;
           qa('[data-field]').forEach(function (b) { b.classList.toggle('on', b === el); });
           relaunch();
         });
@@ -272,17 +278,14 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       /* ---------- 几何 ---------- */
       function geom() {
         var w = stage.w, h = stage.h;
-        var maxR = extIndex === 2
-          ? Math.max(aGravity(), aElectric(), aGravity() + aElectric())
-          : accel();
-        var tf = Math.sqrt(2 * state.h / Math.max(0.1, maxR));
-        var r = state.v0 * tf;
+        // 固定物理量程：视野 x=0~60 m、y=0~20 m（不随射程/高度自归一化）
         var padL = 42, padR = 18, padT = 24, padB = 34;
         var availW = w - padL - padR, availH = h - padT - padB;
-        var s = Math.min(availW / Math.max(r, 1), availH / Math.max(state.h, 1));
-        var ox = padL + (availW - r * s) / 2;
-        var oy = (h - padB) - state.h * s;
-        return { s: s, ox: ox, oy: oy, tf: tf, r: r };
+        var Xref = 60, Yref = 20;
+        var s = Math.min(availW / Xref, availH / Yref);
+        var tf = Tf(), r = range();
+        var ox = padL, oy = (h - padB) - state.h * s;
+        return { s: s, ox: ox, oy: oy, tf: tf, r: r, Xref: Xref, Yref: Yref };
       }
 
       function drawStage() {
@@ -312,6 +315,22 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
           if (p === 0) c.moveTo(X, Y); else c.lineTo(X, Y);
         }
         c.strokeStyle = '#D0C4E8'; c.lineWidth = 1.5; c.setLineDash([5, 5]); c.stroke(); c.restore();
+        // 变化前轨迹（固定量程下的灰虚线基准）
+        c.save(); c.beginPath();
+        for (var pr = 0; pr <= 120; pr++) {
+          var tr = pr / 120 * refPath.tf;
+          var Xr = ox + refPath.v0 * tr * s, Yr = oy + 0.5 * refPath.a * tr * tr * s;
+          if (pr === 0) c.moveTo(Xr, Yr); else c.lineTo(Xr, Yr);
+        }
+        c.strokeStyle = '#c9d4e0'; c.lineWidth = 1.5; c.setLineDash([3, 4]); c.stroke(); c.restore();
+        text(c, '灰虚线 = 变化前', w - 16, 20, '#9aa4b0', 10, 'right');
+        // 固定绝对刻度（m）
+        [0, 20, 40, 60].forEach(function (xm) {
+          var Xt = ox + xm * s;
+          if (Xt > w - 12) return;
+          line(c, Xt, oy + state.h * s, Xt, oy + state.h * s + 4, '#cbd6e2', 1);
+          text(c, String(xm), Xt, oy + state.h * s + 14, '#aab4c0', 10, 'center');
+        });
 
         // 已飞过轨迹（粉）
         var tcur = Math.min(state.t, tf);
@@ -384,9 +403,26 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         var x0 = pad.l, x1 = w - pad.r, top = pad.t + 4, bot = h - pad.b;
         line(c, x0, bot, x1, bot, '#cbd6e2', 1);
         line(c, x0, top, x0, bot, '#cbd6e2', 1);
-        text(c, 'y/m', x0 + 2, top + 4, '#8b95a3', 11);
-        text(c, 'x/m', x1, h - 8, '#8b95a3', 11, 'right');
-        var scale = Math.min((x1 - x0) / Math.max(R, 1), (bot - top) / Math.max(state.h, 1));
+        text(c, 'y / m（向下）', x0 + 2, top + 4, '#8b95a3', 11);
+        text(c, 'x / m', x1, h - 8, '#8b95a3', 11, 'right');
+        var scale = Math.min((x1 - x0) / 60, (bot - top) / 20);   // 固定量程 x 60 m、y 20 m
+        for (var xm = 0; xm <= 60; xm += 20) {
+          var Xg = x0 + xm * scale;
+          line(c, Xg, top, Xg, bot, '#f0f4f8', 1);
+          text(c, String(xm), Xg, bot + 12, '#aab4c0', 10, 'center');
+        }
+        for (var ym = 0; ym <= 20; ym += 5) {
+          var Yg = bot - ym * scale;
+          line(c, x0, Yg, x1, Yg, '#f0f4f8', 1);
+          text(c, String(ym), x0 - 6, Yg, '#aab4c0', 10, 'right');
+        }
+        c.save(); c.beginPath();
+        for (var pr = 0; pr <= 120; pr++) {
+          var tr = pr / 120 * refPath.tf, pxr = refPath.v0 * tr;
+          var Xr = x0 + pxr * scale, Yr = bot - 0.5 * refPath.a * tr * tr * scale;
+          if (pr === 0) c.moveTo(Xr, Yr); else c.lineTo(Xr, Yr);
+        }
+        c.strokeStyle = '#c9d4e0'; c.lineWidth = 1.6; c.setLineDash([4, 4]); c.stroke(); c.restore();
         c.save(); c.beginPath();
         for (var p = 0; p <= 120; p++) {
           var px = p / 120 * R, py = a * px * px / (2 * state.v0 * state.v0);
@@ -398,7 +434,7 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         var cx = x0 + state.v0 * tcur * scale;
         var cy = bot - 0.5 * a * tcur * tcur * scale;
         dot(c, cx, cy, 5, '#FFB3BA', '#fff');
-        text(c, '射程 ' + R.toFixed(1) + ' m', x1 - 4, top + 8, '#8b6a72', 11, 'right');
+        text(c, '射程 ' + R.toFixed(1) + ' m（灰虚线 = 变化前）', x1 - 4, top + 8, '#8b6a72', 11, 'right');
       }
 
       function drawDecompChart() {
@@ -443,15 +479,25 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         var x0 = pad.l, x1 = w - pad.r, top = pad.t + 4, bot = h - pad.b;
         line(c, x0, bot, x1, bot, '#cbd6e2', 1);
         line(c, x0, top, x0, bot, '#cbd6e2', 1);
-        text(c, 'y/m', x0 + 2, top + 4, '#8b95a3', 11);
-        text(c, 'x/m', x1, h - 8, '#8b95a3', 11, 'right');
+        text(c, 'y / m（向下）', x0 + 2, top + 4, '#8b95a3', 11);
+        text(c, 'x / m', x1, h - 8, '#8b95a3', 11, 'right');
         var modes = [
           { a: aGravity() + aElectric(), color: '#FFB3BA', label: '重力+电场' },
           { a: aGravity(), color: '#BFE3F5', label: '仅重力' },
           { a: aElectric(), color: '#B8E8D0', label: '仅电场' }
         ];
-        var maxR = Math.max.apply(null, modes.map(function (m) { return state.v0 * Math.sqrt(2 * state.h / Math.max(0.1, m.a)); }));
-        var scale = Math.min((x1 - x0) / Math.max(maxR, 1), (bot - top) / Math.max(state.h, 1));
+        // 固定量程 x 60 m、y 20 m；三条曲线随 a 真实分开/合拢
+        var scale = Math.min((x1 - x0) / 60, (bot - top) / 20);
+        for (var xm = 0; xm <= 60; xm += 20) {
+          var Xg = x0 + xm * scale;
+          line(c, Xg, top, Xg, bot, '#f0f4f8', 1);
+          text(c, String(xm), Xg, bot + 12, '#aab4c0', 10, 'center');
+        }
+        for (var ym = 0; ym <= 20; ym += 5) {
+          var Yg = bot - ym * scale;
+          line(c, x0, Yg, x1, Yg, '#f0f4f8', 1);
+          text(c, String(ym), x0 - 6, Yg, '#aab4c0', 10, 'right');
+        }
         modes.forEach(function (m) {
           var R = state.v0 * Math.sqrt(2 * state.h / Math.max(0.1, m.a));
           c.save(); c.beginPath();
@@ -465,6 +511,7 @@ input.pj-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
           c.stroke(); c.restore();
         });
         text(c, '粉：重力+电场　蓝：仅重力　绿：仅电场', (x0 + x1) / 2, h - 8, '#8b95a3', 10, 'center');
+        text(c, '实线：' + state.fieldLabel, x1 - 4, top + 8, '#8b6fb0', 10, 'right');
       }
 
       function updateReads() {
