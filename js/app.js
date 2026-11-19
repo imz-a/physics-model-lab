@@ -23,7 +23,7 @@
   };
 
   var els = {};
-  var STATUS_TEXT = { done: '样板已完工', todo: '待建设' };
+  var STATUS_TEXT = { done: '交互完备', todo: '待建设' };
 
   // 当前活动交互模块的清理函数；每次 renderPanel 重渲染前统一执行
   var currentCleanup = null;
