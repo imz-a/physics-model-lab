@@ -192,14 +192,17 @@
     }
     // 电流箭头
     var iMid = (xr + xrRes) / 2;
+    // 坐标约定：PY(half) 为上导轨、PY(-half) 为下导轨（PY(y)=oy−y*scale，y 越大越靠上）。
+    // 默认 B 向里、棒向右 → qv×B 向上 → 棒中电流向上，回路逆时针：下导轨→、棒↑、上导轨←。
+    // 三点流 segs 亦按此顺序（下导轨 xrRes→xr、棒 −half→half、上导轨 xr→xrRes），故箭头须与之一致。
     if (d.ccw) {
-      arrow(ctx, PX(iMid + 0.06), PY(-half), PX(iMid - 0.05), PY(-half), C.peachD, 'I', 2.2);
-      arrow(ctx, PX(iMid - 0.05), PY(half), PX(iMid + 0.06), PY(half), C.peachD, '', 2.2);
-      arrow(ctx, PX(xr), PY(-half + .08), PX(xr), PY(half - .1), C.peachD, '', 2.2);
+      arrow(ctx, PX(iMid - 0.05), PY(-half), PX(iMid + 0.06), PY(-half), C.peachD, 'I', 2.2); // 下导轨 →
+      arrow(ctx, PX(iMid + 0.06), PY(half), PX(iMid - 0.05), PY(half), C.peachD, '', 2.2);    // 上导轨 ←
+      arrow(ctx, PX(xr), PY(-half + .08), PX(xr), PY(half - .1), C.peachD, '', 2.2);          // 棒：下→上
     } else {
-      arrow(ctx, PX(iMid - 0.05), PY(-half), PX(iMid + 0.06), PY(-half), C.peachD, 'I', 2.2);
-      arrow(ctx, PX(iMid + 0.06), PY(half), PX(iMid - 0.05), PY(half), C.peachD, '', 2.2);
-      arrow(ctx, PX(xr), PY(half - .08), PX(xr), PY(-half + .1), C.peachD, '', 2.2);
+      arrow(ctx, PX(iMid + 0.06), PY(-half), PX(iMid - 0.05), PY(-half), C.peachD, 'I', 2.2); // 下导轨 ←
+      arrow(ctx, PX(iMid - 0.05), PY(half), PX(iMid + 0.06), PY(half), C.peachD, '', 2.2);    // 上导轨 →
+      arrow(ctx, PX(xr), PY(half - .08), PX(xr), PY(-half + .1), C.peachD, '', 2.2);          // 棒：上→下
     }
 
     // 导体棒
@@ -526,11 +529,12 @@
         if (dead) return;
         if (!last) last = ts;
         var dt = Math.min(0.05, (ts - last) / 1000); last = ts;
-        var tri, xr, vNow;
+        var xr, vNow;
         if (s.maintain) {
+          // 单向锯齿波：棒始终沿 vdir 方向匀速运动，到边界后重置回起点。
+          // 避免原三角波返程时速度反向、而安培力/外力箭头仍按固定 vdir 绘制，违背楞次定律。
           if (s.playing) { prog += dt / 3.4; if (prog > 1) prog = 0; }
-          tri = 1 - Math.abs(2 * prog - 1);
-          xr = 0.38 + 0.52 * tri;             // 有外力：等速往复
+          xr = s.vdir > 0 ? (0.38 + 0.52 * prog) : (0.90 - 0.52 * prog);
           vNow = s.v;
           slideX = xr;
         } else {
