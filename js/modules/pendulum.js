@@ -258,10 +258,13 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       }
 
       /* ---------- 控件 ---------- */
+      // 「变化前」参数快照，θ–t 图用灰虚线叠加对照
+      var refState = { L: state.L, g: state.g, theta0: state.theta0, mode: state.mode };
       qa('[data-slider]').forEach(function (el) {
         var key = el.getAttribute('data-slider');
         on(el, 'input', function () {
           var v = parseFloat(el.value);
+          refState = { L: state.L, g: state.g, theta0: state.theta0, mode: state.mode };
           if (key === 'theta') { state.theta0 = v; state.dir = 1; }
           else state[key] = v;
           var out = q1('[data-out="' + key + '"]');
@@ -429,37 +432,66 @@ input.pd-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
         if (state.mode === 'large') text(c, '大角度 · 数值积分', 14, 18, '#8b6fb0', 12);
       }
 
+      // 与动画同源的 RK4 预计算：大角度用真实数值解，游标严格落在曲线上
+      function rk4Curve(L, g, theta0, tMax, n) {
+        var svL = state.L, svg = state.g, svth = state.th, svw = state.wv;
+        state.L = L; state.g = g; state.th = theta0 * Math.PI / 180; state.wv = 0;
+        var h = tMax / n, out = new Array(n + 1); out[0] = state.th;
+        for (var i = 1; i <= n; i++) { rk4(h); out[i] = state.th; }
+        state.L = svL; state.g = svg; state.th = svth; state.wv = svw;
+        return out;
+      }
       function drawThetaChart() {
         fit(chart);
         var c = chart.ctx, w = chart.w, h = chart.h;
         if (!w || !h) return;
         c.clearRect(0, 0, w, h);
-        var pad = { l: 38, r: 14, t: 14, b: 22 };
+        var pad = { l: 42, r: 14, t: 14, b: 22 };
         var mid = (pad.t + h - pad.b) / 2;
         line(c, pad.l, h - pad.b, w - pad.r, h - pad.b, '#cbd6e2', 1);
         line(c, pad.l, pad.t, pad.l, h - pad.b, '#cbd6e2', 1);
         line(c, pad.l, mid, w - pad.r, mid, '#e8edf2', 1, [4, 4]);
-        text(c, 'θ', pad.l + 2, pad.t + 4, '#8b95a3', 11);
-        text(c, 't/s', w - pad.r, h - 6, '#8b95a3', 11, 'right');
+        text(c, 'θ / (°)', pad.l + 2, pad.t + 4, '#8b95a3', 11);
+        text(c, 't / s', w - pad.r, h - 6, '#8b95a3', 11, 'right');
         text(c, '0', pad.l - 8, mid, '#8b95a3', 11, 'right');
-        var T = Texact(), x0 = pad.l, x1 = w - pad.r, tMax = T * 3;
-        var maxTh = Math.max(0.05, thetaRad0());
-        var ys = (mid - pad.t - 6) / maxTh;
-        c.save(); c.beginPath();
-        for (var p = 0; p <= x1 - x0; p += 2) {
-          var tt = p / (x1 - x0) * tMax;
-          var val;
-          if (state.mode === 'small') val = thetaRad0() * Math.cos(omega0() * tt);
-          else val = thetaRad0() * Math.cos(2 * Math.PI / T * tt); // 大角度近似形状（周期用精确值）
-          var yy = mid - val * ys;
-          if (p === 0) c.moveTo(x0 + p, yy); else c.lineTo(x0 + p, yy);
+        var T = Texact(), x0 = pad.l, x1 = w - pad.r;
+        var tMax = 12, N = 600;                       // 固定时间窗、固定纵轴量程（θ₀max=60°）
+        var ys = (mid - pad.t - 6) / (Math.PI / 3);
+        text(c, '+60°', pad.l - 8, pad.t + 6, '#8b95a3', 10, 'right');
+        text(c, '−60°', pad.l - 8, h - pad.b - 2, '#8b95a3', 10, 'right');
+        for (var tk = 0; tk <= 4; tk++) { var tx = x0 + tk / 4 * (x1 - x0); text(c, String(tk * 3), tx, h - 8, '#aab4c0', 10, 'center'); }
+        var samples = state.mode === 'large' ? rk4Curve(state.L, state.g, state.theta0, tMax, N) : null;
+        function valAt(tt) {
+          if (state.mode === 'small') return thetaRad0() * Math.cos(omega0() * tt);
+          var u = Math.max(0, Math.min(N, tt / tMax * N)), i = Math.floor(u), f = u - i;
+          return samples[i] + (samples[Math.min(N, i + 1)] - samples[i]) * f;
         }
-        c.strokeStyle = '#D0C4E8'; c.lineWidth = 2.5; c.stroke(); c.restore();
+        function drawCurve(fn, color, dash, width) {
+          c.save(); c.beginPath();
+          for (var p = 0; p <= x1 - x0; p += 2) {
+            var tt = p / (x1 - x0) * tMax, yy = mid - fn(tt) * ys;
+            if (p === 0) c.moveTo(x0 + p, yy); else c.lineTo(x0 + p, yy);
+          }
+          c.strokeStyle = color; c.lineWidth = width; if (dash) c.setLineDash(dash); c.stroke(); c.restore();
+        }
+        var changed = refState.L !== state.L || refState.g !== state.g || refState.theta0 !== state.theta0;
+        if (changed) {
+          var refSamples = refState.mode === 'large' ? rk4Curve(refState.L, refState.g, refState.theta0, tMax, N) : null;
+          var refOm = Math.sqrt(refState.g / refState.L), refA = refState.theta0 * Math.PI / 180;
+          drawCurve(function (tt) {
+            if (refState.mode === 'small') return refA * Math.cos(refOm * tt);
+            var u = Math.max(0, Math.min(N, tt / tMax * N)), i = Math.floor(u), f = u - i;
+            return refSamples[i] + (refSamples[Math.min(N, i + 1)] - refSamples[i]) * f;
+          }, '#b9c2cc', [5, 4], 1.8);
+          text(c, '变化前 θ₀=' + refState.theta0 + '°', x0 + 6, h - pad.b - 12, '#9aa4b0', 10);
+        }
+        drawCurve(valAt, '#D0C4E8', null, 2.5);
         var tt2 = state.t % tMax;
         var cx = x0 + tt2 / tMax * (x1 - x0);
         var cy = mid - curTheta() * ys;
         line(c, cx, pad.t, cx, h - pad.b, '#BFE3F5', 1, [3, 3]);
         dot(c, cx, cy, 5, '#FFB3BA', '#fff');
+        text(c, 'θ₀=' + state.theta0 + '°　T≈' + T.toFixed(2) + ' s　' + (state.mode === 'large' ? 'RK4 真实解（非正弦）' : '小角度简谐近似'), x1 - 4, pad.t + 16, '#8b6fb0', 10, 'right');
       }
 
       function drawPeriodChart() {
