@@ -18,6 +18,9 @@
     sky: '#BFE3F5', skyD: '#5B9BC4', lav: '#D0C4E8', lavD: '#8A76BB'
   };
   var saved = { B: 0.8, L: 0.5, v: 2.0, R: 2.0, bdir: -1, vdir: 1, playing: true, maintain: true };
+  var DEFAULTS = { B: 0.8, L: 0.5, v: 2.0, R: 2.0, bdir: -1, vdir: 1, playing: true, maintain: true };
+  var SCALE_X = 0.5;   // 图纸 1 横坐标单位 = 0.5 m（用于把 x 换算成米代入 Φ=B·L·x）
+  var ROD_RES_X = 0.10; // 电阻所在的图纸横坐标，棒到电阻的距离 = (xr-ROD_RES_X)*SCALE_X
   var CIRCLE = Math.PI * 2;
   var STYLE_ID = 'ml-cpr-style';
 
@@ -71,7 +74,8 @@
     + '.cpr-opt{display:grid;gap:7px;margin-top:10px}'
     + '.cpr-opt button{min-height:40px;text-align:left;padding:8px 12px;border:1px solid var(--line,#dce4ec);border-radius:9px;background:#fff;font-size:14px;color:var(--ink2,#5a6472)}'
     + '.cpr-opt button:hover{background:#f6f8fa}'
-    + '.cpr-opt button.is-right{border-color:#a9dfc4;background:#effaf4;color:#3F7A60;font-weight:700}';
+    + '.cpr-opt button.is-right{border-color:#a9dfc4;background:#effaf4;color:#3F7A60;font-weight:700}'
+    + '.cpr-opt button.is-wrong{border-color:#ffc9cf;background:#fff3f4;color:#c1616c}';
 
   function ensureStyle() {
     if (!doc.getElementById(STYLE_ID)) {
@@ -333,13 +337,13 @@
     } else if (idx === 3) {
       extra = '<div class="cpr-card"><div class="cpr-card__t"><i style="background:var(--pink,#FFB3BA)"></i>高考题型 · 电磁感应中的能量</div>'
         + '<div class="cpr-q"><strong>题目</strong>　光滑平行导轨间距 L，处于磁感应强度 B 的匀强磁场中，'
-        + '导体棒电阻可忽略，外接电阻 R。用水平外力使棒以速度 v 向右匀速运动。<br>'
+        + '导体棒电阻可忽略，外接电阻 R。用水平外力使棒以速度 v <b data-qdir>向右</b>匀速运动。<br>'
         + '<strong>求</strong>　(1) 感应电动势与电流方向；(2) 安培力大小与方向；'
         + '(3) 外力功率；(4) 时间 t 内电阻产生的焦耳热。</div>'
         + '<button class="cpr-btn cpr-btn--primary" type="button" data-act="ans" style="margin-top:11px">查看解析 ▾</button>'
         + '<div class="cpr-ans" data-ans hidden>'
         + '(1) <b>ε = BLv</b>，由右手定则判断电流方向（本图为<b data-a="dir">—</b>）。<br>'
-        + '(2) <b>I = BLv/R</b>，<b>F安 = BIL = B²L²v/R</b>，方向向左、阻碍运动。<br>'
+        + '(2) <b>I = BLv/R</b>，<b>F安 = BIL = B²L²v/R</b>，方向<b data-fdir>向左</b>、阻碍运动。<br>'
         + '(3) 匀速时 F外 = F安，<b>P外 = F安·v = B²L²v²/R</b>。<br>'
         + '(4) <b>Q = I²Rt = (BLv)²t/R</b>，恰好等于外力做的功 W = P外·t。<br>'
         + '代入当前参数：ε = <b data-a="emf">—</b> V，I = <b data-a="I">—</b> A，'
@@ -413,6 +417,9 @@
       if (decayView) { decayView.el.className = 'cpr-chart'; container.querySelector('[data-decay]').appendChild(decayView.el); }
 
       var raf = 0, last = 0, prog = 0, dead = false, listeners = Object.create(null);
+      var slideX = 0.38;   // 棒的图纸横坐标（撤外力后由衰减速度积分推进）
+      var curXr = 0.38;    // 当前帧棒位置（供切换 maintain 时衔接）
+      var decayT = 0;      // 撤外力后累计时间（s）
       var q1 = function (sel) { return container.querySelector(sel); };
       var qa = function (sel) { return container.querySelectorAll(sel); };
       var units = { B: 'T', L: 'm', v: 'm/s', R: 'Ω' };
@@ -441,19 +448,31 @@
       for (var j = 0; j < segs.length; j++) {
         on(listeners, segs[j], 'click', function (e) {
           var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
-          var name = e.currentTarget.getAttribute('data-seg'), val = Number(b.getAttribute('data-val'));
+          var name = e.currentTarget.getAttribute('data-seg'), raw = b.getAttribute('data-val');
+          // rel 分段的值是字符串 'v'/'B'/'L'；bdir/vdir 才是 ±1 数字。统一用字符串存与比较高亮。
+          var val = (name === 'rel') ? String(raw) : Number(raw);
           s[name] = val; setSeg(name, val); syncSaved();
         });
       }
       var pb = q1('[data-act="play"]');
       on(listeners, pb, 'click', function () { s.playing = !s.playing; pb.textContent = s.playing ? '⏸ 暂停' : '▶ 播放'; syncSaved(); });
-      on(listeners, q1('[data-act="reset"]'), 'click', function () { prog = 0; });
+      on(listeners, q1('[data-act="reset"]'), 'click', function () {
+        // 恢复全部默认参数与方向，并同步滑块读数、分段高亮与动画进度
+        for (var dk in DEFAULTS) if (DEFAULTS.hasOwnProperty(dk)) s[dk] = DEFAULTS[dk];
+        for (var sk in DEFAULTS) if (DEFAULTS.hasOwnProperty(sk)) saved[sk] = DEFAULTS[sk];
+        prog = 0; slideX = 0.38; curXr = 0.38; decayT = 0;
+        setOutputs();
+        setSeg('bdir', s.bdir); setSeg('vdir', s.vdir);
+        pb.textContent = s.playing ? '⏸ 暂停' : '▶ 播放';
+        if (mb) { mb.textContent = '撤去外力'; mb.className = 'cpr-btn cpr-btn--warn'; }
+      });
       var mb = q1('[data-act="maintain"]');
       if (mb) on(listeners, mb, 'click', function () {
         s.maintain = !s.maintain;
         mb.textContent = s.maintain ? '撤去外力' : '恢复外力（匀速）';
         mb.className = 'cpr-btn ' + (s.maintain ? 'cpr-btn--warn' : 'cpr-btn--primary');
-        if (s.maintain) prog = 0;
+        if (s.maintain) { prog = 0; }
+        else { decayT = 0; slideX = curXr; } // 从当前位置开始减速滑行
         syncSaved();
       });
       var ab = q1('[data-act="ans"]');
@@ -461,8 +480,10 @@
       var opts = qa('[data-opt]');
       for (var oi = 0; oi < opts.length; oi++) {
         on(listeners, opts[oi], 'click', function (e) {
-          for (var z = 0; z < opts.length; z++) opts[z].classList.remove('is-right');
-          e.currentTarget.classList.add('is-right'); q1('[data-optans]').hidden = false;
+          for (var z = 0; z < opts.length; z++) opts[z].classList.remove('is-right', 'is-wrong');
+          var isCorrect = e.currentTarget.getAttribute('data-opt') === 'b'; // 唯一正确项 B
+          e.currentTarget.classList.add(isCorrect ? 'is-right' : 'is-wrong');
+          q1('[data-optans]').hidden = false;
         });
       }
 
@@ -477,7 +498,8 @@
         if (idx === 1) {
           var set = function (k, v) { var el = q1('[data-rel="' + k + '"]'); if (el) el.textContent = v; };
           set('flux', nf(d.fluxRate) + ' Wb/s');
-          set('phi', nf(s.B * s.L * xr) + ' Wb');
+          // x 为棒到电阻的实际距离（m）= 图纸横坐标差 × SCALE_X，不再把归一化坐标直接当米
+          set('phi', nf(s.B * s.L * Math.max(0, xr - ROD_RES_X) * SCALE_X) + ' Wb');
           set('emf', nf(d.emf) + ' V');
           drawRelation(chartView, s, s.rel);
         }
@@ -494,6 +516,9 @@
           var sa = function (k, v) { var el = q1('[data-a="' + k + '"]'); if (el) el.textContent = v; };
           sa('dir', d.ccw ? '逆时针' : '顺时针'); sa('emf', nf(d.emf));
           sa('I', nf(d.I)); sa('F', nf(d.F)); sa('P', nf(d.P));
+          // 题干运动方向与解析中安培力方向随 vdir 实时翻转
+          var qd = q1('[data-qdir]'); if (qd) qd.textContent = s.vdir > 0 ? '向右' : '向左';
+          var fd = q1('[data-fdir]'); if (fd) fd.textContent = s.vdir > 0 ? '向左' : '向右';
         }
       }
 
@@ -501,10 +526,23 @@
         if (dead) return;
         if (!last) last = ts;
         var dt = Math.min(0.05, (ts - last) / 1000); last = ts;
-        if (s.playing) { prog += dt / 3.4; if (prog > 1) prog = 0; }
-        var tri = 1 - Math.abs(2 * prog - 1);
-        var xr = 0.38 + 0.52 * tri;
-        var vNow = s.maintain ? s.v : s.v * Math.exp(-derive(s).k * prog * 3.4);
+        var tri, xr, vNow;
+        if (s.maintain) {
+          if (s.playing) { prog += dt / 3.4; if (prog > 1) prog = 0; }
+          tri = 1 - Math.abs(2 * prog - 1);
+          xr = 0.38 + 0.52 * tri;             // 有外力：等速往复
+          vNow = s.v;
+          slideX = xr;
+        } else {
+          // 撤外力：速度按 v=v0·e^(-kt) 指数衰减，位置对速度积分推进（不再等幅三角波往复）
+          if (s.playing) decayT += dt;
+          vNow = s.v * Math.exp(-derive(s).k * decayT);
+          var vxr = 0.30 * (vNow / s.v) * s.vdir; // 图纸速度与真实速度同比例衰减
+          slideX = clamp(slideX + vxr * dt, 0.38, 0.90); // 到达右端即停
+          xr = slideX;
+          prog = decayT / 3.4;
+        }
+        curXr = xr;
         var d = derive(s, vNow);
         var alpha = Math.min(1, prog / 0.06, (1 - prog) / 0.06);
         view.ctx.save(); view.ctx.globalAlpha = Math.max(0, alpha);
@@ -519,7 +557,7 @@
         if (dead) return; dead = true;
         global.cancelAnimationFrame(raf);
         for (var t in listeners) {
-          if (!listeners.hasOwnProperty(t)) continue;
+          if (!Object.prototype.hasOwnProperty.call(listeners, t)) continue;
           var a = listeners[t];
           for (var k = 0; k < a.length; k++) a[k][0].removeEventListener(t, a[k][1]);
         }
