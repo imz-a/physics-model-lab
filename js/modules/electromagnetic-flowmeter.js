@@ -37,42 +37,64 @@
   function calc(s){var U=s.B*s.d*s.v,Q=Math.PI*s.d*s.d*s.v/4,E=s.B*s.v;return{U:U,Q:Q,E:E};}
   function build(idx,s){
     var c=calc(s),ex='';
-    if(idx===1){ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--sky,#BFE3F5)"></i>U 与各物理量的关系</div>'+seg('rel',[['v','U—v'],['B','U—B'],['d','U—d']],s.rel||'v')+'<div data-chart></div><div class="fm-rel"><div><span>U = B·d·v</span><b data-r="u">—</b></div><div><span>两极间场强 E = Bv</span><b data-r="e">—</b></div><div><span>平衡条件 qvB = qE</span><b>已建立</b></div></div></div>'
+    if(idx===1){ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--sky,#BFE3F5)"></i>U 与各物理量 · Q—U 关系</div>'+seg('rel',[['v','U—v'],['B','U—B'],['d','U—d'],['U','Q—U']],s.rel||'v')+'<div data-chart></div><div class="fm-rel"><div><span>U = B·d·v</span><b data-r="u">—</b></div><div><span>两极间场强 E = Bv</span><b data-r="e">—</b></div><div><span>平衡条件 qvB = qE</span><b>已建立</b></div></div></div>'
       +'<div class="fm-card"><div class="fm-t"><i style="background:var(--lav,#D0C4E8)"></i>为什么 U 与流量成正比</div><div class="fm-f">导电液体中的正负离子随液体以 v 运动，受洛伦兹力 qvB 分别向两侧偏转；<br>积累电荷产生电场 E，当 <b>qE = qvB</b> 时达到稳定：<br><b>E = Bv，U = Ed = Bvd</b>。<br>因此测得电压即可反推流速与流量。</div></div>';}
     else if(idx===2){ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--peach,#FFD8A8)"></i>流量换算 · Q = πdU / 4B</div><div class="fm-rel"><div><span>管截面积 S = πd²/4</span><b data-r="area">—</b></div><div><span>体积流量 Q = S·v</span><b data-r="q">—</b></div><div><span>由电压反推 Q = πdU/(4B)</span><b data-r="q2">—</b></div></div><div class="fm-n">两种算法结果必然相同——这就是电磁流量计只用电压就能测流量的原理。</div></div>'
       +'<div class="fm-card"><div class="fm-t"><i style="background:var(--mint,#B8E8D0)"></i>应用拓展</div><div class="fm-f">优点：无机械转动部件、不阻碍流体、可测腐蚀性液体。<br>限制：液体必须导电；磁场 B 与管径 d 需要标定。<br>若 B 加倍而 U 不变，说明实际流速减半。</div></div>';}
     else if(idx===3){ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--pink,#FFB3BA)"></i>高考题型 · 两题限时</div>'+quiz()+'<div class="fm-n">题目随 B、管径 d、流速 v 实时更新，提交后即时判分。</div></div>';}
-    else ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--mint,#B8E8D0)"></i>核心规律</div><div class="fm-f"><b>qvB = qE → E = Bv</b><br>电极间电势差 <b>U = Bvd</b><br>体积流量 <b>Q = v·πd²/4 = πdU/(4B)</b></div><div class="fm-n">粉色正离子向上、蓝色负离子向下偏转，两极积累异号电荷形成电场。</div></div>'
-      +'<div class="fm-card"><div class="fm-t"><i style="background:var(--sky,#BFE3F5)"></i>方向判定</div><div class="fm-f">用左手定则：磁感线穿手心（本图向里），四指指正电荷运动方向（向右），拇指即受力方向。<br>正离子向上 → 上极板带正电、电势高；下极板带负电。</div></div>';
+    else ex='<div class="fm-card"><div class="fm-t"><i style="background:var(--mint,#B8E8D0)"></i>核心规律</div><div class="fm-f"><b>qvB = qE → E = Bv</b><br>电极间电势差 <b>U = Bvd</b><br>体积流量 <b>Q = v·πd²/4 = πdU/(4B)</b></div><div class="fm-n">B 向里时粉色正离子向上、蓝色负离子向下偏转（B 向外时整体翻转），两极积累异号电荷形成电场。</div></div>'
+      +'<div class="fm-card"><div class="fm-t"><i style="background:var(--sky,#BFE3F5)"></i>方向判定</div><div class="fm-f">用左手定则：四指指正电荷运动方向（向右），拇指即受力方向。<br>B 向里（×）时正离子向上 → 上极板电势高；B 向外（·）时正离子向下 → 下极板电势高。可用顶部按钮切换磁场方向。</div></div>';
     return '<div class="fm-w"><div class="fm-bar"><span class="fm-chip">电磁感应应用 · 流量计</span>'+seg('bdir',[['in','B 向里 ×'],['out','B 向外 ·']],saved.bdir||'in')+'<span class="fm-sp"></span><button class="fm-btn fm-btn--p" data-play>'+(s.playing?'⏸ 暂停':'▶ 播放')+'</button><button class="fm-btn" data-reset>↺ 重置</button></div>'
       +'<div class="fm-grid"><div class="fm-card"><div class="fm-t"><i></i>导电液体在磁场中流动<span class="fm-hint">电场平衡后电压稳定</span></div><div data-cv></div></div>'
       +'<div class="fm-side"><div class="fm-card"><div class="fm-t"><i style="background:var(--pink,#FFB3BA)"></i>参数</div>'
       +'<label class="fm-ctrl"><span>磁感应强度 B<b data-o="B"></b></span><input type="range" data-k="B" min="0.2" max="2" step="0.1" value="'+s.B+'"></label>'
       +'<label class="fm-ctrl"><span>管径 d<b data-o="d"></b></span><input type="range" data-k="d" min="0.02" max="0.2" step="0.01" value="'+s.d+'"></label>'
       +'<label class="fm-ctrl"><span>流速 v<b data-o="v"></b></span><input type="range" data-k="v" min="0.2" max="3" step="0.1" value="'+s.v+'"></label></div>'
-      +'<div class="fm-card"><div class="fm-t"><i style="background:var(--peach,#FFD8A8)"></i>实时读数</div><div class="fm-rd">'+rd('U','电极电压 U','V')+rd('E','极间场强 E','V/m')+rd('v','流速 v','m/s')+rd('Q','流量 Q','m³/s')+'</div><div class="fm-n" data-status></div></div></div></div><div class="fm-extra">'+ex+'</div></div>';
+      +'<div class="fm-card"><div class="fm-t"><i style="background:var(--peach,#FFD8A8)"></i>实时读数</div><div class="fm-rd">'+rd('U','两极电势差大小 U','V')+rd('E','极间场强 E','V/m')+rd('v','流速 v','m/s')+rd('Q','流量 Q','m³/s')+'</div><div class="fm-n" data-status></div></div></div></div><div class="fm-extra">'+ex+'</div></div>';
   }
   function arrow(ctx,x1,y1,x2,y2,c){var dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);if(L<3)return;var ux=dx/L,uy=dy/L,h=8;ctx.save();ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-ux*h-uy*h*.6,y2-uy*h+ux*h*.6);ctx.lineTo(x2-ux*h+uy*h*.6,y2-uy*h-ux*h*.6);ctx.closePath();ctx.fill();ctx.restore();}
   function label(ctx,t,x,y,c,al){ctx.save();ctx.font='15px "PingFang SC","Microsoft YaHei",sans-serif';ctx.fillStyle=c||C.ink3;ctx.textAlign=al||'left';ctx.fillText(t,x,y);ctx.restore();}
   function chart(view,key,s){
     var ctx=view.ctx,W=view.w,H=view.h;ctx.clearRect(0,0,W,H);
-    var L=46,R=W-18,T=16,B=H-30,min=0,max=key==='B'?2:key==='d'?.2:key==='v'?3:key==='U'?4:0.004,cv=s[key];
-    if(key==='Q'){max=Math.PI*.2*.2*3/4;}
-    function fn(x){if(key==='v')return s.B*s.d*x;if(key==='B')return x*s.d*s.v;if(key==='d')return s.B*x*s.v;if(key==='U')return x*4*s.B/(Math.PI*s.d);return Math.PI*s.d*s.d*x/4;}
-    var ymax=fn(max)*1.15||1;
-    function X(v){return L+(R-L)*(v-min)/(max-min);}function Y(v){return B-(B-T)*v/ymax;}
+    var L=50,R=W-18,T=18,B=H-32;
+    // 固定绝对量程：横轴 U 为 0~1.2 V（= B_max·d_max·v_max），不随当前参数变
+    var min=0,max=key==='B'?2:key==='d'?.2:key==='v'?3:1.2;
+    function fn(x,p){
+      if(key==='v')return p.B*p.d*x;
+      if(key==='B')return x*p.d*p.v;
+      if(key==='d')return p.B*x*p.v;
+      return Math.PI*p.d*x/(4*p.B);   // Q—U：Q = πdU/(4B)，πd/(4B) 为斜率
+    }
+    var ymax=key==='U'?1.0:1.2;       // Q 轴 0~1.0 m³/s，U 轴 0~1.2 V
+    function X(v){return L+(R-L)*(v-min)/(max-min);}
+    function Y(v){return B-(B-T)*Math.min(1.05,v/ymax);}
     ctx.save();ctx.strokeStyle='#e8edf2';ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,B);ctx.lineTo(R,B);ctx.stroke();ctx.restore();
-    var names={v:'v (m/s)',B:'B (T)',d:'d (m)',U:'U (V)',Q:'U (V)'},yn={v:'U / V',B:'U / V',d:'U / V',U:'Q / (m³/s)',Q:'Q / (m³/s)'};
-    label(ctx,(key==='U'||key==='Q'?'Q — U':'U — '+key.toUpperCase()),L+4,T+10,C.mintD);label(ctx,yn[key],L-4,T+2,C.ink3,'right');
-    ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.6;ctx.beginPath();ctx.moveTo(X(min),Y(fn(min)));ctx.lineTo(X(max),Y(fn(max)));ctx.stroke();ctx.restore();
-    var cvv=key==='U'?calc(s).U:key==='Q'?calc(s).U:cv;
-    ctx.save();ctx.fillStyle=C.pinkD;ctx.beginPath();ctx.arc(X(cvv),Y(fn(cvv)),6,0,Math.PI*2);ctx.fill();ctx.restore();
+    for(var gi=0;gi<=4;gi++){
+      var gy=ymax*gi/4;
+      ctx.save();ctx.strokeStyle='#f2f5f8';ctx.beginPath();ctx.moveTo(L,Y(gy));ctx.lineTo(R,Y(gy));ctx.stroke();ctx.restore();
+      label(ctx,gy.toFixed(1),L-5,Y(gy)+4,C.ink3,'right');
+    }
+    var names={v:'v / (m/s)',B:'B / T',d:'d / m',U:'U / V'};
+    label(ctx,key==='U'?'Q — U（Q = πdU / 4B）':'U — '+key,L+4,T+10,C.mintD);
+    label(ctx,key==='U'?'Q / (m³/s)':'U / V',L-4,T+2,C.ink3,'right');
+    // 变化前参考直线（灰虚线，参数快照）
+    if(s.ref){
+      ctx.save();ctx.strokeStyle='#aeb8c6';ctx.lineWidth=2;ctx.setLineDash([5,5]);
+      ctx.beginPath();ctx.moveTo(X(min),Y(fn(min,s.ref)));ctx.lineTo(X(max),Y(fn(max,s.ref)));ctx.stroke();ctx.restore();
+    }
+    ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.6;ctx.beginPath();
+    ctx.moveTo(X(min),Y(fn(min,s)));ctx.lineTo(X(max),Y(fn(max,s)));ctx.stroke();ctx.restore();
+    var cvv=key==='U'?calc(s).U:s[key];
+    ctx.save();ctx.fillStyle=C.pinkD;ctx.beginPath();ctx.arc(X(cvv),Y(fn(cvv,s)),6,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.restore();
     label(ctx,names[key],R,H-6,C.ink2,'right');label(ctx,'当前 '+nf(cvv),L+4,H-6,C.pinkD);
+    label(ctx,'— 当前   ┄ 变化前',R-2,T+10,C.ink3,'right');
   }
 
   NS.modules['electromagnetic-flowmeter']={render:function(container,extIndex){
     style();var idx=Math.max(0,Math.min(3,Number(extIndex)||0));
     var s={B:saved.B,d:saved.d,v:saved.v,playing:saved.playing,bdir:saved.bdir||'in',rel:'v',t:0};
+    s.ref={B:s.B,d:s.d,v:s.v};   // 变化前参数快照（只供灰色虚线参考）
     container.innerHTML=build(idx,s);
     var v=view(1000,430);container.querySelector('[data-cv]').appendChild(v.el);
     var chartV=idx===1?view(560,210):null;if(chartV){chartV.el.className='fm-c';container.querySelector('[data-chart]').appendChild(chartV.el);}
@@ -82,31 +104,41 @@
     function setSeg(n,val){var b=q('[data-seg="'+n+'"]');if(!b)return;var x=b.querySelectorAll('button');for(var i=0;i<x.length;i++)x[i].classList.toggle('is-on',x[i].getAttribute('data-val')===val);}
     function sync(){saved.B=s.B;saved.d=s.d;saved.v=s.v;saved.playing=s.playing;saved.bdir=s.bdir;}
     ['B','d','v'].forEach(function(k){q('[data-o="'+k+'"]').textContent=nf(s[k])+' '+units[k];});
-    for(var gi=0;gi<qa('input[type=range]').length;gi++){(function(el){on(LST,el,'input',function(e){var k=e.target.getAttribute('data-k');s[k]=Number(e.target.value);q('[data-o="'+k+'"]').textContent=nf(s[k])+' '+units[k];sync();resetQuiz();});})(qa('input[type=range]')[gi]);}
+    for(var gi=0;gi<qa('input[type=range]').length;gi++){(function(el){on(LST,el,'input',function(e){var k=e.target.getAttribute('data-k');s.ref={B:s.B,d:s.d,v:s.v};s[k]=Number(e.target.value);q('[data-o="'+k+'"]').textContent=nf(s[k])+' '+units[k];sync();resetQuiz();});})(qa('input[type=range]')[gi]);}
     for(var gj=0;gj<qa('[data-seg]').length;gj++){(function(box){on(LST,box,'click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(!b)return;var n=box.getAttribute('data-seg'),val=b.getAttribute('data-val');if(n==='rel')s.rel=val;else s.bdir=val;setSeg(n,val);sync();resetQuiz();});})(qa('[data-seg]')[gj]);}
     var pb=q('[data-play]');on(LST,pb,'click',function(){s.playing=!s.playing;pb.textContent=s.playing?'⏸ 暂停':'▶ 播放';sync();});on(LST,q('[data-reset]'),'click',function(){s.t=0;});
     var Q={1:{opts:[],correct:0,text:'',expl:''},2:{ans:0,text:'',unit:'',expl:''}},sel=-1;
     function quizData(){
       var up=s.bdir==='in';
-      Q[1].text='磁场'+(up?'垂直纸面向里、 liquid 向右流动':'垂直纸面向外、液体向右流动')+'时，哪一侧电极电势较高？';
+      // 全中文题干；B 向里（×）时正离子受力向上，向外（·）时向下
+      Q[1].text='磁场'+(up?'垂直纸面向里（×）、液体向右流动':'垂直纸面向外（·）、液体向右流动')+'时，哪一侧电极电势较高？';
       Q[1].opts=['上电极','下电极','两侧相等'];Q[1].correct=up?0:1;
       Q[1].expl=up?'正离子受洛伦兹力向上，上极板带正电，电势高。':'正离子受洛伦兹力向下，下极板带正电，电势高。';
       var c=calc(s);
       Q[2].text='当前 B='+nf(s.B)+' T，d='+nf(s.d)+' m，v='+nf(s.v)+' m/s，求体积流量 Q（单位 m³/s）。';
-      Q[2].ans=c.Q;Q[2].unit='m³/s';Q[2].expl='Q = v·πd²/4 = '+nf(s.v)+'×π×'+nf(s.d)+'²/4 = '+c.Q.toExponential(2)+' m³/s；也可由 πdU/(4B) 得到。';
+      Q[2].ans=c.Q;Q[2].unit='m³/s';Q[2].expl='Q = v·πd²/4 = '+nf(s.v)+'×π×'+nf(s.d)+'²/4 = '+c.Q.toExponential(2)+' m³/s；也可由 πdU/(4B) = '+nf(c.U)+' 反推，结果相同。';
     }
-    function paintQuiz(){if(idx!==3)return;quizData();q('[data-qt="1"]').textContent=Q[1].text.replace('liquid ','液体');q('[data-qt="2"]').textContent=Q[2].text;q('[data-unit]').textContent=Q[2].unit;var b=q('[data-op="1"]');b.innerHTML='';Q[1].opts.forEach(function(t,i){var x=doc.createElement('button');x.type='button';x.textContent=String.fromCharCode(65+i)+'. '+t;x.setAttribute('data-i',i);b.appendChild(x);});}
-    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');}}
+    function paintQuiz(){if(idx!==3)return;quizData();q('[data-qt="1"]').textContent=Q[1].text;q('[data-qt="2"]').textContent=Q[2].text;q('[data-unit]').textContent=Q[2].unit;var b=q('[data-op="1"]');b.innerHTML='';Q[1].opts.forEach(function(t,i){var x=doc.createElement('button');x.type='button';x.textContent=String.fromCharCode(65+i)+'. '+t;x.setAttribute('data-i',i);b.appendChild(x);});}
+    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;q('[data-fb="1"]').textContent='';q('[data-fb="2"]').textContent='';paintQuiz();}}
     function submit(n){var fb=q('[data-fb="'+n+'"]');if(typeof n==='string')n=Number(n);if(n===1){if(sel<0){fb.className='fm-fb no';fb.hidden=false;fb.textContent='请先选择。';return;}var ok=sel===Q[1].correct;fb.className='fm-fb '+(ok?'ok':'no');fb.hidden=false;fb.innerHTML=(ok?'✅ 正确！':'❌ 再想想。')+Q[1].expl;}
       else{var val=Number(q('[data-num]').value),ok2=isFinite(val)&&Math.abs(val-Q[2].ans)<=Math.max(1e-6,Math.abs(Q[2].ans)*.06);fb.className='fm-fb '+(ok2?'ok':'no');fb.hidden=false;fb.innerHTML=(ok2?'✅ 正确！':'❌ 参考答案 '+Q[2].ans.toExponential(2)+' m³/s。')+Q[2].expl;}}
     if(idx===3){paintQuiz();on(LST,q('[data-op="1"]'),'click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(!b)return;sel=Number(b.getAttribute('data-i'));var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.toggle('is-sel',i===sel);});for(var z=0;z<qa('[data-sub]').length;z++){(function(b){on(LST,b,'click',function(){submit(b.getAttribute('data-sub'));});})(qa('[data-sub]')[z]);}}
 
     function draw(){
       ctx.clearRect(0,0,W,H);var c=calc(s),h=s.d*700,top=H/2-h/2,bot=H/2+h/2,x0=70,x1=880;
+      // 变化前管径（灰虚线参考）
+      if(s.ref && Math.abs(s.ref.d-s.d)>1e-9){
+        var h0=s.ref.d*700,t0=H/2-h0/2;
+        ctx.save();ctx.setLineDash([6,6]);ctx.strokeStyle='#aeb8c6';ctx.lineWidth=2;
+        ctx.strokeRect(x0,t0,x1-x0,h0);ctx.restore();
+        label(ctx,'变化前管径 d='+nf(s.ref.d)+' m（灰虚线）',x0+8,t0-6,'#8b95a3');
+      }
       // 管道底色（先画，避免遮住磁场符号）
       ctx.save();ctx.fillStyle='#F3FAF7';ctx.fillRect(x0,top,x1-x0,h);ctx.restore();
       // 磁场符号
-      for(var gx=x0+30;gx<x1-20;gx+=52)for(var gy=top+16;gy<bot;gy+=42){
+      // 点叉密度随 B 加密（写死的 52px 会让 B 变化在图上无从体现）
+      var fsx=Math.round(70-s.B*22),fsy=Math.round(56-s.B*12);
+      for(var gx=x0+30;gx<x1-20;gx+=fsx)for(var gy=top+16;gy<bot;gy+=fsy){
         ctx.save();ctx.strokeStyle='#B9DFCC';ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(gx,gy,6,0,Math.PI*2);ctx.stroke();
         if(s.bdir==='in'){ctx.beginPath();ctx.moveTo(gx-4,gy-4);ctx.lineTo(gx+4,gy+4);ctx.moveTo(gx+4,gy-4);ctx.lineTo(gx-4,gy+4);ctx.stroke();}
         else{ctx.fillStyle='#B9DFCC';ctx.beginPath();ctx.arc(gx,gy,2,0,Math.PI*2);ctx.fill();}
@@ -119,7 +151,8 @@
       var up=s.bdir==='in'?1:-1;
       for(var i=0;i<38;i++){
         var seed=(i*0.173)%1,px=x0+((seed*780+s.t*s.v*95)%780);
-        var drift=(i%2?1:-1)*up*(4+s.B*s.v*4)*((px-x0)/780);
+        // 电荷符号与颜色共用 i%3 判据：i%3===0 为正离子(+)，B 向里时向上漂
+        var drift=(i%3===0?-1:1)*up*(4+s.B*s.v*4)*((px-x0)/780);
         var py=(top+12)+((i*0.271)%1)*(h-24)+drift;
         if(py<top+5||py>bot-5)continue;
         var pos=i%3===0;
@@ -130,25 +163,38 @@
       // 洛伦兹力箭头
       var hx=x0+540,hy=H/2;
       ctx.save();ctx.fillStyle='#fff';ctx.strokeStyle=C.pinkD;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(hx,hy-22,9,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
-      arrow(ctx,hx,hy-22,hx,hy-22-up*52,C.pinkD);label(ctx,'F+=qvB',hx+10,hy-22-up*52,C.pinkD);
-      arrow(ctx,hx,hy+22,hx,hy+22+up*52,C.skyD);label(ctx,'F−',hx+10,hy+22+up*52,C.skyD);
+      // 洛伦兹力箭头长度随 B 变化（固定参考量程，不做自归一化）
+      var fLen=22+30*s.B;
+      arrow(ctx,hx,hy-22,hx,hy-22-up*fLen,C.pinkD);label(ctx,'F+=qvB',hx+10,hy-22-up*fLen,C.pinkD);
+      arrow(ctx,hx,hy+22,hx,hy+22+up*fLen,C.skyD);label(ctx,'F−',hx+10,hy+22+up*fLen,C.skyD);
       // 电极 + 电压表
       var ex=x0+420;
       ctx.save();ctx.fillStyle=C.lavD;ctx.fillRect(ex-4,top-18,8,18);ctx.fillRect(ex-4,bot,8,18);ctx.strokeStyle=C.lavD;ctx.lineWidth=2.2;
       ctx.beginPath();ctx.moveTo(ex,top-18);ctx.lineTo(940,top-18);ctx.lineTo(940,top+16);ctx.moveTo(ex,bot+18);ctx.lineTo(940,bot+18);ctx.lineTo(940,bot-16);ctx.stroke();
       ctx.fillStyle='#fff';ctx.strokeStyle=C.lavD;ctx.lineWidth=2;ctx.beginPath();ctx.arc(940,H/2,28,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
       label(ctx,'V',940,H/2+7,C.lavD,'center');
-      label(ctx,nf(c.U)+' V',940,H/2-42,C.lavD,'center');
-      label(ctx,up?'上 +  下 −':'上 −  下 +',940,bot+52,up?C.pinkD:C.skyD,'center');
-      arrow(ctx,x0+40,top-34,x0+150,top-34,C.mintD);label(ctx,'液体流速 v',x0+40,top-42,C.mintD);
-      label(ctx,'B '+(s.bdir==='in'?'向里 ×':'向外 ·'),x0+16,bot+34,C.mintD);
+      label(ctx,'U = '+nf(c.U)+' V（两极电势差大小）',968,H/2-46,C.lavD,'right');
+      label(ctx,up?'上电势高 + / 下 −':'上 − / 下电势高 +',940,bot+52,up?C.pinkD:C.skyD,'center');
+      var vLen=60+35*s.v;
+      arrow(ctx,x0+40,top-34,x0+40+vLen,top-34,C.mintD);label(ctx,'液体流速 v = '+nf(s.v)+' m/s',x0+40,top-42,C.mintD);
+      label(ctx,'B = '+nf(s.B)+' T（'+(s.bdir==='in'?'× 向里':'· 向外')+'）',x0+16,bot+34,C.mintD);
+      label(ctx,'管径 d = '+nf(s.d)+' m',x0+16,bot+52,C.ink3);
+      label(ctx,'●+ 正离子　●− 负离子　电极电势高低随磁场方向翻转',x0+16,H-12,C.ink2);
+      // 固定绝对刻度尺：管径按 700 px/m 绘制，故 0.1 m = 70 px
+      var scPx=70;
+      ctx.save();ctx.strokeStyle=C.ink3;ctx.lineWidth=1.4;ctx.beginPath();
+      ctx.moveTo(x0+16,H-34);ctx.lineTo(x0+16+scPx,H-34);
+      ctx.moveTo(x0+16,H-38);ctx.lineTo(x0+16,H-30);ctx.moveTo(x0+16+scPx,H-38);ctx.lineTo(x0+16+scPx,H-30);
+      ctx.stroke();ctx.restore();
+      label(ctx,'0.1 m（x / m、y / m 同尺度）',x0+20+scPx,H-38,C.ink3);
     }
     function frame(ts){if(dead)return;if(!last)last=ts;var dt=Math.min(.05,(ts-last)/1000);last=ts;if(s.playing)s.t+=dt;draw();
       var c=calc(s),set=function(k,v){var e=q('[data-r="'+k+'"]');if(e)e.textContent=v;};
       set('U',nf(c.U));set('E',nf(c.E));set('v',nf(s.v));set('Q',c.Q.toExponential(2));
       if(idx===1){set('u',nf(c.U)+' V');set('e',nf(c.E)+' V/m');chart(chartV,s.rel,s);}
       if(idx===2){set('area',(Math.PI*s.d*s.d/4).toExponential(2)+' m²');set('q',c.Q.toExponential(2));set('q2',(Math.PI*s.d*c.U/(4*s.B)).toExponential(2));}
-      var st=q('[data-status]');if(st)st.textContent='qvB = qE 平衡后 E = Bv = '+nf(c.E)+' V/m，U = Bvd = '+nf(c.U)+' V。';
+      var st=q('[data-status]');if(st)st.textContent='qvB = qE 平衡后 E = Bv = '+nf(c.E)+' V/m，U = Bvd = '+nf(c.U)+' V（电势差大小）；'
+        + (s.bdir==='in'?'B 向里：正离子向上，上电极电势高。':'B 向外：正离子向下，下电极电势高。');
       rAF=global.requestAnimationFrame(frame);
     }
     rAF=global.requestAnimationFrame(frame);
