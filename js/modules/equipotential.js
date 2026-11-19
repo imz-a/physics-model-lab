@@ -57,6 +57,8 @@
   function quiz(){return '<div class="eq-qz"><h5>第 1 题 · 选择判断</h5><div data-qt="1"></div><div class="eq-opts" data-op="1"></div><button class="eq-btn" type="button" data-sub="1">提交答案</button><div class="eq-fb" data-fb="1" hidden></div>'
     +'<h5>第 2 题 · 定量计算</h5><div data-qt="2"></div><div class="eq-in"><input type="number" step="any" data-num placeholder="输入数值"><span data-unit></span><button class="eq-btn" type="button" data-sub="2">提交答案</button></div><div class="eq-fb" data-fb="2" hidden></div></div>';}
 
+  var EQ_CHART_TITLE=['电势剖面 φ(x) · 沿水平扫描线','场强分量与电势梯度 · 正交验证','A / B 两点电势对比','等势线疏密 → 场强大小'];
+  var EQ_CHART_HINT=['红色圆点为当前探测点所在位置','Ex 与 −∂φ/∂x 曲线重合','拖动 A / B 点，柱状图实时更新','等势面越密处场强越大'];
   var PS=[-1,1], XW=2.2, YW=1.2;
   function phi(x,y,t,E){
     if(t==='uniform') return E*y;
@@ -90,7 +92,8 @@
         +'<div class="eq-card"><div class="eq-t"><i style="background:var(--mint,#B8E8D0)"></i>四种场源</div><div class="eq-f">单正电荷：场线向外、等势面同心圆，φ&gt;0<br>单负电荷：场线向内，φ&lt;0<br>等量异种：连线中垂面是零等势面<br>匀强电场：平行等距场线与等势面</div></div>';
     }
     return '<div class="eq-w"><div class="eq-bar"><span class="eq-chip">静电场 · 场线与等势面</span>'+seg('type',[['point+','正点电荷'],['point-','负点电荷'],['dipole','等量异种'],['uniform','匀强电场']],s.type)+'<span class="eq-sp"></span><button class="eq-btn eq-btn--p" type="button" data-play>'+(s.playing?'⏸ 暂停':'▶ 播放')+'</button><button class="eq-btn" type="button" data-reset>↺ 重置</button></div>'
-      +'<div class="eq-grid"><div class="eq-card"><div class="eq-t"><i></i>'+(idx===2?'A / B 两点可拖动':'电场线与等势线分布')+'<span class="eq-hint">拖动圆点改变位置</span></div><div data-cv></div></div>'
+      +'<div class="eq-grid"><div class="eq-card"><div class="eq-t"><i></i>'+(idx===2?'A / B 两点可拖动':'电场线与等势线分布')+'<span class="eq-hint">拖动圆点改变位置</span></div><div data-cv></div>'
+      +'<div class="eq-t" style="margin-top:12px"><i style="background:var(--sky,#BFE3F5)"></i>'+EQ_CHART_TITLE[idx]+'<span class="eq-hint">'+EQ_CHART_HINT[idx]+'</span></div><div data-datachart></div></div>'
       +'<div class="eq-side"><div class="eq-card"><div class="eq-t"><i style="background:var(--pink,#FFB3BA)"></i>参数与图层</div>'
       +'<label class="eq-ctrl"><span>场强系数 E₀<b data-o="E"></b></span><input type="range" data-k="E" min="0.4" max="2" step="0.1" value="'+s.E+'"></label>'
       +'<div style="font-size:13px;color:var(--ink3)">'+(idx===1?'图层切换见右下卡片':'场强系数同时缩放场线密度与电势数值')+'</div></div>'
@@ -106,11 +109,44 @@
   }
   function label(ctx,t,x,y,col,al){ctx.save();ctx.font='15px "PingFang SC","Microsoft YaHei",sans-serif';ctx.fillStyle=col||C.ink3;ctx.textAlign=al||'left';ctx.fillText(t,x,y);ctx.restore();}
 
+  function drawDataChart(view, idx, s, P, pts) {
+    var K=global.ChartKit; if(!K) return;
+    var E=s.E, t=s.type, C2=K.colors;
+    var xs=[], ph=[], ex=[], gx=[];
+    for(var i=0;i<=80;i++){
+      var x=-XW+2*XW*i/80;
+      xs.push(x); ph.push(phi(x,P.y,t,E)); ex.push(fieldAt(x,P.y,t,E).x); gx.push(-(phi(x+.008,P.y,t,E)-phi(x-.008,P.y,t,E))/.016);
+    }
+    if(idx===0){
+      K.line(view,{title:'电势剖面 φ(x)',xLabel:'位置 x',xUnit:'m',yLabel:'电势 φ',yUnit:'V',
+        series:[{name:'φ(x)',color:C2.lav,width:2.6,points:xs.map(function(x,i){return[x,ph[i]]})}],
+        markers:[{x:P.x,y:phi(P.x,P.y,t,E),label:'探测点',color:C2.pink,cross:true,r:5}]});
+    } else if(idx===1){
+      K.line(view,{title:'场强 Ex 与 −∂φ/∂x 重合',xLabel:'位置 x',xUnit:'m',yLabel:'场强分量',yUnit:'V/m',
+        legend:true,
+        series:[{name:'Ex（直接）',color:C2.sky,width:2.6,points:xs.map(function(x,i){return[x,ex[i]]})},
+                {name:'−∂φ/∂x（梯度）',color:C2.peach,width:2,dash:[5,3],points:xs.map(function(x,i){return[x,gx[i]]})}]});
+    } else if(idx===2){
+      var pa=phi(pts.a.x,pts.a.y,t,E), pb=phi(pts.b.x,pts.b.y,t,E);
+      K.bars(view,{title:'A / B 两点电势对比',yLabel:'电势 φ',yUnit:'V',
+        bars:[{label:'A 点',value:pa,color:C2.pink,note:'('+pts.a.x.toFixed(2)+', '+pts.a.y.toFixed(2)+')'},
+              {label:'B 点',value:pb,color:C2.mint,note:'('+pts.b.x.toFixed(2)+', '+pts.b.y.toFixed(2)+')'}],
+        yMax:Math.max(1,Math.abs(pa),Math.abs(pb))*1.3});
+    } else {
+      // 场强大小沿 x 的分布（疏密指标）
+      var mag=[]; for(var j=0;j<=80;j++){var xx=xs[j],f=fieldAt(xx,P.y,t,E);mag.push([xx,Math.hypot(f.x,f.y)]);}
+      K.line(view,{title:'场强大小 |E| 沿 x 分布',xLabel:'位置 x',xUnit:'m',yLabel:'场强 |E|',yUnit:'V/m',
+        series:[{name:'|E|',color:C2.mint,width:2.6,points:mag}],
+        markers:[{x:P.x,y:Math.hypot(fieldAt(P.x,P.y,t,E).x,fieldAt(P.x,P.y,t,E).y),label:'探测点',color:C2.pink,r:5,cross:true}]});
+    }
+  }
+
   NS.modules['equipotential']={render:function(container,extIndex){
     style();var idx=Math.max(0,Math.min(3,Number(extIndex)||0));
     var s={type:saved.type,E:saved.E,show:saved.show,playing:saved.playing};
     container.innerHTML=build(idx,s);
     var v=view(1000,430);container.querySelector('[data-cv]').appendChild(v.el);
+    var dv=view(700,250);dv.el.style.background='#fff';container.querySelector('[data-datachart]').appendChild(dv.el);
     var ctx=v.ctx,W=v.w,H=v.h,LST={},rAF=0,last=0,dead=false,animT=0;
     var pts={p:{x:-.45,y:.45},a:{x:-.9,y:.55},b:{x:.9,y:-.45}},drag=null;
     var q=function(x){return container.querySelector(x);},qa=function(x){return container.querySelectorAll(x);};
@@ -240,6 +276,7 @@
       set('E',nf(L));set('phi',nf(phi(P.x,P.y,s.type,s.E))+' V');set('Ex',nf(F.x));set('Ey',nf(F.y));
       var st=q('[data-status]');if(st)st.textContent='电场线垂直于等势面，沿电场线方向电势降低最快。'+(s.type==='dipole'?' 等量异种连线的中垂面电势为零。':'');
       if(idx===2){set('pa',nf(phi(pts.a.x,pts.a.y,s.type,s.E))+' V');set('pb',nf(phi(pts.b.x,pts.b.y,s.type,s.E))+' V');}
+      drawDataChart(dv,idx,s,pts[idx===2?'a':'p'],pts);
       rAF=global.requestAnimationFrame(frame);
     }
     rAF=global.requestAnimationFrame(frame);
