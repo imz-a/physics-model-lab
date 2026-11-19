@@ -26,6 +26,10 @@
   var EU = 1000, QU = 5e-7, MU = 1e-6, VU = 10;   // V/m, C, kg, m/s
   var PL = 0.30, GAP = 0.20, DR = 0.12;           // 极板长 / 板间距 / 漂移距离
   var XMIN = -0.05, XMAX = 0.47, YR = 0.125;      // 画布物理视窗
+
+  // 四个子标签的主区专属数据图
+  var CHART_TITLE = ['轨迹对比图 · 有 / 无电场', '偏转量 y 随参数的变化曲线', '能量随水平位置 x 的转化图', '偏移几何分解 · 屏上总偏移 Y'];
+  var CHART_HINT = ['深色实线为当前轨迹，灰虚线为无电场时的直线', '扫 E / q 为直线，扫 v₀ 为双曲线，当前参数用圆点标出', 'Ekx 恒定、Eky 与 W 同步增长，二者始终相等', 'y 为板内偏移，屏上 Y = y + vᵧ·D/v₀'];
   var CIRCLE = Math.PI * 2;
 
   var STYLE_ID = 'ml-cpe-style';
@@ -251,7 +255,10 @@
       + '<div class="cpe-grid">'
       + '<div class="cpe-card"><div class="cpe-card__t"><i></i>运动轨迹与速度分解'
       + '<span class="cpe-card__hint">纵向为等比例显示 · 深色虚线为无碰撞时的延长轨迹</span></div>'
-      + '<div data-canvas></div></div>'
+      + '<div data-canvas></div>'
+      + '<div class="cpe-card__t" style="margin-top:14px"><i style="background:var(--sky,#BFE3F5)"></i>' + CHART_TITLE[idx]
+      + '<span class="cpe-card__hint">' + CHART_HINT[idx] + '</span></div>'
+      + '<div data-datachart></div></div>'
       + '<div class="cpe-side">'
       + '<div class="cpe-card"><div class="cpe-card__t"><i style="background:var(--pink,#FFB3BA)"></i>参数调节</div>'
       + slider('E', '电场强度 E（×10³ V/m）', 1, 10, 0.5, s.E, '×10³ V/m')
@@ -496,6 +503,81 @@
     label(ctx, '当前 ' + nf(cv) + ' → ' + nf(val(cv) * 1000) + ' mm', L + 4, H - 9, C.lavD, 'left');
   }
 
+  /* ---------------- 子标签主区专属数据图 ---------------- */
+  function drawDataChart(view, idx, d, s) {
+    var K = global.ChartKit;
+    if (!K) return;
+    var m = d.m, v0 = d.v0, a = d.a, q = d.q, E = d.E;
+    if (idx === 0) {
+      var pts = [], line = [];
+      for (var i = 0; i <= 60; i++) {
+        var x = PL * i / 60, t = x / v0;
+        pts.push([x * 100, 0.5 * a * t * t * 1000]);
+        line.push([x * 100, 0]);
+      }
+      var maxAbs = Math.max(2, Math.abs(0.5 * a * (PL / v0) * (PL / v0) * 1000) * 1.15);
+      K.line(view, {
+        title: '轨迹对比：有 / 无偏转电场', xLabel: '水平位置 x', xUnit: 'cm', yLabel: '竖直偏移 y', yUnit: 'mm',
+        xMin: 0, xMax: PL * 100, yMin: -maxAbs, yMax: maxAbs, legend: true,
+        series: [
+          { name: '无电场（直线）', color: C.ink3, dash: [5, 4], width: 1.6, points: line },
+          { name: '有电场（抛物线）', color: C.pinkD, width: 2.6, points: pts }
+        ],
+        markers: [{ x: PL * 100, y: d.yL * 1000, label: '出口 y=' + nf(d.yL * 1000) + ' mm', color: C.lavD, cross: true }]
+      });
+    } else if (idx === 1) {
+      var fns = [
+        { name: '扫 E（y∝E）', color: C.pinkD, fn: function (r) { return r; } },
+        { name: '扫 q（y∝q）', color: C.mintD, fn: function (r) { return r; } },
+        { name: '扫 m（y∝1/m）', color: C.skyD, fn: function (r) { return 1 / r; } },
+        { name: '扫 v₀（y∝1/v₀²）', color: C.lavD, fn: function (r) { return 1 / (r * r); } }
+      ];
+      var series = fns.map(function (f) {
+        var pts2 = [];
+        for (var j = 0; j <= 40; j++) { var r = 0.4 + 3.6 * j / 40; pts2.push([r, f.fn(r)]); }
+        return { name: f.name, color: f.color, width: 2.2, points: pts2 };
+      });
+      K.line(view, {
+        title: '控制变量：偏移倍数随参数倍数变化', xLabel: '参数变为原来的', xUnit: '倍', yLabel: '偏移 y 变为原来的', yUnit: '倍',
+        xMin: 0.4, xMax: 4, yMin: 0, yMax: 4, legend: true, series: series,
+        markers: [{ x: 1, y: 1, label: '当前状态', color: C.ink, r: 5, cross: true }],
+        hlines: [{ y: 1, label: '基准', color: C.ink3, dash: [4, 4] }]
+      });
+    } else if (idx === 2) {
+      var ekx = 0.5 * m * v0 * v0 * 1e3;
+      var sEky = [], sW = [];
+      var ekEnd = 0.5 * m * Math.pow(a * PL / v0, 2) * 1e3;
+      // 纵轴按 Eky/W 的量程定，让"同步增长"清晰可见；Ekx 恒定值另用文字标注
+      var maxE = Math.max(0.01, ekEnd) * 1.2;
+      for (var k = 0; k <= 50; k++) {
+        var xk = PL * k / 50, tk = xk / v0, vyk = a * tk, yk = 0.5 * a * tk * tk;
+        sEky.push([xk * 100, 0.5 * m * vyk * vyk * 1e3]);
+        sW.push([xk * 100, q * E * yk * 1e3]);
+      }
+      K.line(view, {
+        title: '能量转化：Eky 与 W 同步增长', xLabel: '水平位置 x', xUnit: 'cm', yLabel: '能量', yUnit: 'mJ',
+        xMin: 0, xMax: PL * 100, yMin: 0, yMax: maxE, legend: true,
+        series: [
+          { name: '竖直动能 Eky', color: C.peachD, width: 2.6, points: sEky },
+          { name: '做功 W=qEy', color: C.lavD, width: 2.2, dash: [5, 3], points: sW }
+        ],
+        markers: [{ x: PL * 100, y: ekEnd, label: '出口 W=Eky', color: C.peachD, r: 5 }]
+      });
+    } else {
+      var yIn = Math.abs(d.yL * 1000), drift = Math.abs(d.vyL * (DR / v0) * 1000), total = Math.abs(d.yScreen * 1000);
+      K.bars(view, {
+        title: '屏上总偏移 = 板内偏移 + 漂移段偏移', yLabel: '偏移量', yUnit: 'mm',
+        yMax: Math.max(1, total * 1.25),
+        bars: [
+          { label: '板内 y', value: yIn, color: C.pinkD, note: 'qEL²/2mv₀²' },
+          { label: '漂移段 Δy', value: drift, color: C.skyD, note: 'vᵧ·D/v₀' },
+          { label: '屏上总 Y', value: total, color: C.lavD, note: 'y + Δy' }
+        ],
+        fmt: function (v) { return nf(v) + ' mm'; }
+      });
+    }
+  }
+
   /* ---------------- 模块注册 ---------------- */
   NS.modules['charged-particle-electric'] = {
     render: function (container, extIndex) {
@@ -509,6 +591,9 @@
 
       var view = setupCanvas(1000, 430);
       container.querySelector('[data-canvas]').appendChild(view.el);
+      var dataView = setupCanvas(680, 260);
+      dataView.el.className = 'cpe-chart';
+      container.querySelector('[data-datachart]').appendChild(dataView.el);
       var chartView = idx === 1 ? setupCanvas(560, 210) : null;
       if (chartView) {
         chartView.el.className = 'cpe-chart';
@@ -641,6 +726,7 @@
         var d = derive(s);
         var cur = drawScene(view, d, s, prog);
         updateReadouts(d, cur);
+        drawDataChart(dataView, idx, d, s);
         raf = global.requestAnimationFrame(frame);
       }
       raf = global.requestAnimationFrame(frame);
