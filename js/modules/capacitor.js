@@ -489,8 +489,8 @@
           var pol = '';
           for(var p=0;p<4;p++){
             var px = L + (p+0.5)*w/4;
-            pol += '<text x="'+px.toFixed(1)+'" y="'+(tin+14)+'" fill="#9b87c4" font-size="10" text-anchor="middle">+</text>'
-              + '<text x="'+px.toFixed(1)+'" y="'+(bin-5)+'" fill="#9b87c4" font-size="10" text-anchor="middle">−</text>';
+            pol += '<text x="'+px.toFixed(1)+'" y="'+(tin+14)+'" fill="#9b87c4" font-size="10" text-anchor="middle">−</text>'
+              + '<text x="'+px.toFixed(1)+'" y="'+(bin-5)+'" fill="#9b87c4" font-size="10" text-anchor="middle">+</text>';
           }
           q('capPolar').innerHTML = pol;
           q('capErText').style.display = '';
