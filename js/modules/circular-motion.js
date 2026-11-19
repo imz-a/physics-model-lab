@@ -81,7 +81,7 @@ input.cm-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       :extIndex===2
         ?'<div class="cm-card"><div class="cm-hd"><h4>临界问题</h4><small>能否完整通过最高点</small></div><div class="cm-status" data-status></div><div class="cm-tip" data-crit></div></div>'
         :extIndex===3?quizHTML():'';
-    var chartTitle=['v–θ 速度随位置变化','F向–v 关系','临界速度–半径关系','F向–v 关系'][extIndex];
+    var chartTitle=['v–θ 速度随位置变化','F向–v 关系','临界速度–半径关系','v–θ 速度随位置变化'][extIndex];
     container.innerHTML=STYLE+'<div class="cm-wrap"><div class="cm-intro"><span class="cm-chip hot">'+intro+'</span><span class="cm-chip">机械能守恒</span><span class="cm-chip">读数为示意值</span></div>'
       +'<div class="cm-grid"><div><div class="cm-card"><div class="cm-hd"><h4>竖直圆周运动</h4><small>小球沿圆周运动，矢量实时转向</small></div><canvas class="cm-cv" data-cv="stage"></canvas>'
       +'<div class="cm-legend"><span><i style="background:#FFB3BA"></i>速度 v</span><span><i style="background:#D0C4E8"></i>向心力</span><span><i style="background:#BFE3F5"></i>重力 mg</span></div></div>'
@@ -92,21 +92,28 @@ input.cm-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
       +'<div class="cm-btns"><button type="button" class="cm-btn seg on" data-model="string">绳模型</button><button type="button" class="cm-btn seg" data-model="rod">杆模型</button></div>'
       +'<div class="cm-btns"><button type="button" class="cm-btn main" data-btn="toggle">暂停</button><button type="button" class="cm-btn" data-btn="reset">回到最低点</button></div></div>'
       +'<div class="cm-card"><div class="cm-hd"><h4>实时读数</h4><small>随位置刷新</small></div><div class="cm-reads">'
-      +[['v','当前速度 / (m/s)',1],['Fc','向心力 / N',1],['omega','角速度 ω / (rad/s)',1],['Tperiod','周期估计 / s',0],['vtop','最高点速度 / (m/s)',0],['T','绳/杆作用力 / N',0]]
+      +[['v','当前速度 / (m/s)',1],['Fc','向心力 / N',1],['omega','角速度 ω / (rad/s)',1],['Tperiod','瞬时 2π/ω / s（非真实周期）',0],['vtop','最高点速度 / (m/s)',0],['T','绳/杆作用力 / N',0]]
         .map(function(r){return'<div class="cm-read'+(r[2]?' hl':'')+'"><span>'+r[1]+'</span><b data-read="'+r[0]+'">—</b></div>';}).join('')
-      +'</div><div class="cm-tip">速度由机械能守恒决定：v²(θ) = v₀² − 2gr(1−cosθ)。</div></div>'+extra+'</div></div></div>';
+      +'</div><div class="cm-tip">速度由机械能守恒决定：v²(θ) = v₀² − 2gr(1−cosθ)。竖直面内 ω=v/r 是瞬时值，2π/ω 不是真实周期。绳模型 v₀&lt;√(2gr) 时仍绷紧、作摆动；√(2gr)&lt;v₀&lt;√(5gr) 时在上半圆绳松弛、小球做斜抛；杆模型可过顶（顶速可为 0）。</div></div>'+extra+'</div></div></div>';
     var q=function(s){return container.querySelector(s);},qa=function(s){return container.querySelectorAll(s);};
     var stage=mk(q('[data-cv="stage"]')),chart=mk(q('[data-cv="chart"]')),dis=[];
     function on(t,ty,fn,o){t.addEventListener(ty,fn,o);dis.push(function(){t.removeEventListener(ty,fn,o);});}
-    var st={v0:8,r:1.5,mass:2,angle:0,model:'string',dir:1,running:true,last:0,manual:false};
+    var st={v0:8,r:1.5,mass:2,angle:0,model:'string',dir:1,running:true,last:0,manual:false,detached:false,proj:null};
     function vAt(th){var v2=st.v0*st.v0-2*G*st.r*(1-Math.cos(th));return Math.sqrt(Math.max(0,v2));}
     function vcrit(){return st.model==='string'?Math.sqrt(5*G*st.r):2*Math.sqrt(G*st.r);}
     function canLoop(){return st.v0>=vcrit();}
-    qa('[data-slider]').forEach(function(el){var k=el.getAttribute('data-slider');on(el,'input',function(){st[k]=parseFloat(el.value);q('[data-out="'+k+'"]').textContent=(k==='r'?st[k].toFixed(1):String(st[k]));if(k==='angle'){st.manual=true;st.angle=st[k]*Math.PI/180;st.dir=1;}else st.manual=false;if(extIndex===2)refreshCrit();});});
-    qa('[data-model]').forEach(function(b){on(b,'click',function(){st.model=b.getAttribute('data-model');qa('[data-model]').forEach(function(x){x.classList.toggle('on',x===b);});if(extIndex===2)refreshCrit();});});
+    var P2=Math.PI*2;
+    function ratio(){return st.v0*st.v0/(G*st.r);}
+    // 绳张力 T = mv²/r + mg·cosθ（θ 自最低点量起）。T=0 → cosθ=(2−v₀²/(gr))/3
+    function detachAngle(){if(st.model!=='string')return null;var k=ratio();if(k<=2+1e-9||k>=5-1e-9)return null;return Math.acos(Math.max(-1,Math.min(1,(2-k)/3)));}
+    function swingAngle(){var c=1-ratio()/2;if(c<=-1)return Math.PI;if(c>=1)return 0;return Math.acos(c);}
+    function resetMotion(){st.angle=0;st.dir=1;st.detached=false;st.proj=null;}
+    function beginDetach(thd){var co=Math.cos(thd),vd=Math.sqrt(Math.max(0,-G*st.r*co));st.angle=thd;st.detached=true;st.proj={x:st.r*Math.sin(thd),y:st.r*Math.cos(thd),vx:vd*co,vy:-vd*Math.sin(thd)};}
+    qa('[data-slider]').forEach(function(el){var k=el.getAttribute('data-slider');on(el,'input',function(){st[k]=parseFloat(el.value);q('[data-out="'+k+'"]').textContent=(k==='r'?st[k].toFixed(1):String(st[k]));if(k==='angle'){st.manual=true;st.angle=st[k]*Math.PI/180;st.dir=1;var td=detachAngle();if(td!==null&&st.angle>=td)beginDetach(td);else{st.detached=false;st.proj=null;}}else{st.manual=false;resetMotion();}if(extIndex===2)refreshCrit();});});
+    qa('[data-model]').forEach(function(b){on(b,'click',function(){st.model=b.getAttribute('data-model');qa('[data-model]').forEach(function(x){x.classList.toggle('on',x===b);});resetMotion();if(extIndex===2)refreshCrit();});});
     var tg=q('[data-btn="toggle"]');on(tg,'click',function(){st.running=!st.running;tg.textContent=st.running?'暂停':'继续';tg.classList.toggle('main',st.running);});
-    on(q('[data-btn="reset"]'),'click',function(){st.angle=0;st.dir=1;st.manual=false;q('[data-slider="angle"]').value=0;q('[data-out="angle"]').textContent='0';});
-    function refreshCrit(){var el=q('[data-status]'),box=q('[data-crit]');if(!el)return;var ok=canLoop();el.className='cm-status'+(ok?'':' no');el.textContent=ok?'✓ 速度足够，能完整通过最高点':'✗ 速度不足，无法完成完整圆周';box.innerHTML=(st.model==='string'?'绳模型':'杆模型')+'：v₀临 = '+vcrit().toFixed(2)+' m/s（v顶临 = '+(st.model==='string'?Math.sqrt(G*st.r).toFixed(2):'0')+' m/s）；当前 v₀ = '+st.v0.toFixed(1)+' m/s。';}
+    on(q('[data-btn="reset"]'),'click',function(){resetMotion();st.manual=false;q('[data-slider="angle"]').value=0;q('[data-out="angle"]').textContent='0';});
+    function refreshCrit(){var el=q('[data-status]'),box=q('[data-crit]');if(!el)return;var ok=canLoop(),td=detachAngle();el.className='cm-status'+(ok?'':' no');el.textContent=ok?'✓ 速度足够，能完整通过最高点':(td!==null?'✗ 绳在上半圆松弛，小球脱离做斜抛':'✗ 速度不足，沿圆弧往返摆动（未过顶）');box.innerHTML=(st.model==='string'?'绳模型':'杆模型')+'：v₀临 = '+vcrit().toFixed(2)+' m/s（v顶临 = '+(st.model==='string'?Math.sqrt(G*st.r).toFixed(2):'0')+' m/s）；当前 v₀ = '+st.v0.toFixed(1)+' m/s。'+(td!==null?' 脱离角 θ = '+(td*180/Math.PI).toFixed(0)+'°。':'');}
     if(extIndex===2)refreshCrit();
     if(extIndex===3){
       QUIZ.forEach(function(z){function refresh(){var d=z.build(parseFloat(q('[data-qs="'+z.id+'"]').value));q('[data-qp="'+z.id+'"]').textContent=d.prompt;q('[data-qo="'+z.id+'"]').textContent=q('[data-qs="'+z.id+'"]').value+(z.unit||'');q('[data-qopts="'+z.id+'"]').innerHTML=d.opts.map(function(o,i){return'<button type="button" class="cm-opt" data-q="'+z.id+'" data-i="'+i+'">'+o+'</button>';}).join('');q('[data-qfb="'+z.id+'"]').textContent='';q('[data-qex="'+z.id+'"]').hidden=true;}
@@ -115,55 +122,121 @@ input.cm-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;backgr
     }
     function drawStage(){
       fit(stage);var c=stage.ctx,w=stage.w,h=stage.h;if(!w||!h)return;c.clearRect(0,0,w,h);
-      var cx=w*.42,cy=h*.54,R=Math.min(h*.36,110),th=st.angle,v=vAt(th);
-      c.save();c.beginPath();c.arc(cx,cy,R,0,6.2832);c.strokeStyle='#E6DFFA';c.lineWidth=2;c.setLineDash([5,4]);c.stroke();c.restore();
+      var cx=w*.42,cy=h*.54,R0=Math.min(h*.36,110),R=R0*Math.max(.6,Math.min(1.4,st.r/1.5));
+      var th=st.angle,v,ux,uy,Fc=0;
+      c.save();c.beginPath();c.arc(cx,cy,R0,0,P2);c.strokeStyle='#e3e8ee';c.lineWidth=1.5;c.setLineDash([4,4]);c.stroke();c.restore();
+      if(Math.abs(R-R0)>2)text(c,'r=1.5 m（变化前）',cx+R0+5,cy-R0+9,'#aab4c0',10);
+      c.save();c.beginPath();c.arc(cx,cy,R,0,P2);c.strokeStyle='#E6DFFA';c.lineWidth=2;c.setLineDash([5,4]);c.stroke();c.restore();
       dot(c,cx,cy,4,'#8b95a3');
-      var bx=cx+R*Math.sin(th),by=cy+R*Math.cos(th);
-      line(c,cx,cy,bx,by,st.model==='string'?'#D0C4E8':'#BFE3F5',st.model==='string'?2:5);
+      var bx,by;
+      if(st.detached&&st.proj){
+        // 绳松弛后的斜抛轨迹（物理坐标 x 右为正、y 下为正，单位 m）
+        var p={x:st.proj.x,y:st.proj.y,vx:st.proj.vx,vy:st.proj.vy};
+        c.save();c.beginPath();
+        for(var s=0;s<=60;s++){
+          var sx=cx+p.x/st.r*R,sy=cy+p.y/st.r*R;
+          if(s===0)c.moveTo(sx,sy);else c.lineTo(sx,sy);
+          p.vy+=G*.03;p.x+=p.vx*.03;p.y+=p.vy*.03;
+        }
+        c.strokeStyle='#c9d4e0';c.lineWidth=1.8;c.setLineDash([4,4]);c.stroke();c.restore();
+        bx=cx+st.proj.x/st.r*R;by=cy+st.proj.y/st.r*R;
+        v=Math.sqrt(st.proj.vx*st.proj.vx+st.proj.vy*st.proj.vy);
+        arrow(c,bx,by,bx+st.proj.vx/st.r*R*.42,by+st.proj.vy/st.r*R*.42,'#FFB3BA','v');
+        text(c,'绳松弛 · 斜抛',w-12,36,'#c26b7a',12,'right');
+      }else{
+        bx=cx+R*Math.sin(th);by=cy+R*Math.cos(th);v=vAt(th);
+        line(c,cx,cy,bx,by,st.model==='string'?'#D0C4E8':'#BFE3F5',st.model==='string'?2:5);
+        var tx=Math.cos(th)*st.dir,ty=-Math.sin(th)*st.dir,vl=Math.min(70,v*5);
+        arrow(c,bx,by,bx+tx*vl,by+ty*vl,'#FFB3BA','v');
+        Fc=st.mass*v*v/st.r;var fl=Math.min(60,Fc*1.6);
+        ux=(cx-bx)/Math.max(1,R);uy=(cy-by)/Math.max(1,R);
+        arrow(c,bx,by,bx+ux*fl,by+uy*fl,'#D0C4E8','F向');
+      }
       dot(c,bx,by,13,'#FFB3BA','#f28f9a');
-      // 速度（切向）
-      var tx=Math.cos(th),ty=-Math.sin(th),vl=Math.min(70,v*5)*st.dir;
-      arrow(c,bx,by,bx+tx*vl,by+ty*vl,'#FFB3BA','v');
-      // 向心力（指向圆心）
-      var Fc=st.mass*v*v/st.r,fl=Math.min(60,Fc*1.6);
-      var ux=(cx-bx)/Math.max(1,R),uy=(cy-by)/Math.max(1,R);
-      arrow(c,bx,by,bx+ux*fl,by+uy*fl,'#D0C4E8','F向');
-      arrow(c,bx,by,bx,by+34,'#BFE3F5','mg');
+      arrow(c,bx,by,bx,by+Math.min(60,14+st.mass*G*1.6),'#BFE3F5','mg');  // 长度随质量变化
       var deg=(th*180/Math.PI)%360;if(deg<0)deg+=360;
-      text(c,'θ='+deg.toFixed(0)+'°　v='+v.toFixed(2)+' m/s',w-12,18,'#5a6472',12,'right');
+      text(c,'θ='+deg.toFixed(0)+'°　v='+v.toFixed(2)+' m/s　r='+st.r.toFixed(1)+' m',w-12,18,'#5a6472',12,'right');
       text(c,st.model==='string'?'绳模型':'杆模型',12,18,'#8b6fb0',12);
     }
     function drawChart(){
       fit(chart);var c=chart.ctx,w=chart.w,h=chart.h;if(!w||!h)return;c.clearRect(0,0,w,h);
-      var x0=40,x1=w-14,top=14,bot=h-24;line(c,x0,bot,x1,bot,'#cbd6e2',1);line(c,x0,top,x0,bot,'#cbd6e2',1);
+      var x0=48,x1=w-14,top=16,bot=h-28;
+      line(c,x0,bot,x1,bot,'#cbd6e2',1);line(c,x0,top,x0,bot,'#cbd6e2',1);
+      function clamp01(u){return Math.max(0,Math.min(1,u));}
+      function frame(xlab,ylab){text(c,xlab,x1,h-8,'#8b95a3',11,'right');text(c,ylab,x0+2,top+4,'#8b95a3',10);text(c,'0',x0-4,bot+1,'#aab4c0',10,'right');}
       if(extIndex===0||extIndex===3){
-        var vmax=Math.max(st.v0,3)*1.1;c.save();c.beginPath();
-        for(var i=0;i<=120;i++){var th=2*Math.PI*i/120,y=bot-vAt(th)/vmax*(bot-top);if(i===0)c.moveTo(x0,y);else c.lineTo(x0+i/120*(x1-x0),y);}c.strokeStyle='#D0C4E8';c.lineWidth=2.4;c.stroke();c.restore();
-        var cx=x0+(st.angle%(2*Math.PI))/(2*Math.PI)*(x1-x0);line(c,cx,top,cx,bot,'#e8edf2',1,[3,3]);dot(c,cx,bot-vAt(st.angle)/vmax*(bot-top),5,'#FFB3BA','#fff');
-        text(c,'0',x0,bot+11,'#8b95a3',10);text(c,'360°',x1,bot+11,'#8b95a3',10,'right');
-      }else if(extIndex===1){
-        c.save();c.beginPath();for(var j=0;j<=60;j++){var vv=15*j/60,Fc=st.mass*vv*vv/st.r,y2=bot-Fc/Math.max(1,st.mass*225/st.r)*(bot-top);if(j===0)c.moveTo(x0,y2);else c.lineTo(x0+j/60*(x1-x0),y2);}c.strokeStyle='#FFB3BA';c.lineWidth=2.5;c.stroke();c.restore();
-        text(c,'F向 ∝ v²',x0+8,top+8,'#c07884',11);
-      }else{
-        c.save();c.beginPath();for(var k=0;k<=60;k++){var rr=.5+2.5*k/60,vc=st.model==='string'?Math.sqrt(5*G*rr):2*Math.sqrt(G*rr),y3=bot-vc/12*(bot-top);if(k===0)c.moveTo(x0,y3);else c.lineTo(x0+k/60*(x1-x0),y3);}c.strokeStyle='#D0C4E8';c.lineWidth=2.5;c.stroke();c.restore();
-        line(c,x0,bot-st.v0/12*(bot-top),x1,bot-st.v0/12*(bot-top),'#FFB3BA',1,[4,4]);text(c,'当前 v₀',x1-4,bot-st.v0/12*(bot-top)-8,'#c07884',11,'right');
+        var vAxis=Math.max(6,Math.ceil(Math.max(st.v0,3)*1.1/2)*2);
+        function py(v){return bot-clamp01(v/vAxis)*(bot-top);}
+        function pxTh(th){return x0+clamp01(th/P2)*(x1-x0);}
+        frame('θ / (°)','v / (m/s)');
+        text(c,String(vAxis),x0-4,top+4,'#aab4c0',10,'right');text(c,'0',x0,bot+12,'#aab4c0',10,'center');text(c,'360°',x1,bot+12,'#aab4c0',10,'right');
+        line(c,x0,py(st.v0),x1,py(st.v0),'#e3e8ee',1,[4,4]);text(c,'v₀='+st.v0.toFixed(1),x0+5,py(st.v0)-8,'#aab4c0',10);
+        var td=detachAngle(),thEnd=td!==null?td:P2;
+        var nSeg=Math.max(2,Math.round(120*thEnd/P2));
+        c.save();c.beginPath();for(var i=0;i<=nSeg;i++){var th=thEnd*i/nSeg,X=pxTh(th),Y=py(vAt(th));if(i===0)c.moveTo(X,Y);else c.lineTo(X,Y);}c.strokeStyle='#D0C4E8';c.lineWidth=2.4;c.stroke();c.restore();
+        if(td!==null){
+          c.save();c.beginPath();for(var ii=0;ii<=120-nSeg;ii++){var th2=thEnd+(P2-thEnd)*ii/(120-nSeg),X2=pxTh(th2),Y2=py(vAt(th2));if(ii===0)c.moveTo(X2,Y2);else c.lineTo(X2,Y2);}c.strokeStyle='#dfe6ee';c.lineWidth=1.8;c.setLineDash([4,4]);c.stroke();c.restore();
+          line(c,pxTh(td),top,pxTh(td),bot,'#FFB3BA',1,[4,4]);text(c,'绳松弛 '+(td*180/Math.PI).toFixed(0)+'°',pxTh(td)+4,top+12,'#c26b7a',10);
+          text(c,'灰虚线：脱离后不再沿圆',x0+6,bot-12,'#9aa4b0',10);
+        }
+        var curTh=st.detached&&st.proj?thEnd:Math.max(0,Math.min(P2,st.angle));
+        line(c,pxTh(curTh),top,pxTh(curTh),bot,'#e8edf2',1,[3,3]);dot(c,pxTh(curTh),py(vAt(curTh)),5,'#FFB3BA','#fff');
+        return;
       }
-      text(c,'v / (m/s)',x1,h-8,'#8b95a3',11,'right');
+      if(extIndex===1){
+        // 固定绝对量程：默认 m=2 kg、r=1.5 m、v≤16 m/s → 350 N
+        var FcAxis=Math.max(100,Math.ceil(2*16*16/1.5/50)*50);
+        function pyF(F){return bot-clamp01(F/FcAxis)*(bot-top);}
+        function pxV(v){return x0+v/16*(x1-x0);}
+        frame('v / (m/s)','F向 / N');
+        text(c,FcAxis,x0-4,top+4,'#aab4c0',10,'right');text(c,'16',x1,bot+12,'#aab4c0',10,'right');
+        c.save();c.beginPath();for(var r=0;r<=60;r++){var vr=16*r/60,X=pxV(vr),Y=pyF(2*vr*vr/1.5);if(r===0)c.moveTo(X,Y);else c.lineTo(X,Y);}c.strokeStyle='#c9d4e0';c.lineWidth=1.6;c.setLineDash([5,4]);c.stroke();c.restore();
+        text(c,'变化前 m=2 kg、r=1.5 m',x0+6,top+16,'#9aa4b0',10);
+        c.save();c.beginPath();for(var j=0;j<=60;j++){var vj=16*j/60,Xj=pxV(vj),Yj=pyF(st.mass*vj*vj/st.r);if(j===0)c.moveTo(Xj,Yj);else c.lineTo(Xj,Yj);}c.strokeStyle='#FFB3BA';c.lineWidth=2.5;c.stroke();c.restore();
+        var vnow=st.detached&&st.proj?Math.sqrt(st.proj.vx*st.proj.vx+st.proj.vy*st.proj.vy):vAt(st.angle);
+        dot(c,pxV(Math.min(16,vnow)),pyF(st.mass*vnow*vnow/st.r),5,'#FFB3BA','#fff');
+        return;
+      }
+      var Vax=13;
+      function pyVc(v){return bot-clamp01(v/Vax)*(bot-top);}
+      function pxR(rr){return x0+(rr-.5)/2.5*(x1-x0);}
+      frame('r / m','v临 / (m/s)');
+      text(c,String(Vax),x0-4,top+4,'#aab4c0',10,'right');[.5,1.5,3].forEach(function(rr){text(c,rr.toFixed(1),pxR(rr),bot+12,'#aab4c0',10,'center');});
+      c.save();c.beginPath();for(var k=0;k<=60;k++){var rr=.5+2.5*k/60,vc=st.model==='string'?Math.sqrt(5*G*rr):2*Math.sqrt(G*rr),X=pxR(rr),Y=pyVc(vc);if(k===0)c.moveTo(X,Y);else c.lineTo(X,Y);}c.strokeStyle='#D0C4E8';c.lineWidth=2.5;c.stroke();c.restore();
+      line(c,x0,pyVc(st.v0),x1,pyVc(st.v0),'#FFB3BA',1,[4,4]);text(c,'当前 v₀='+st.v0.toFixed(1),x1-4,pyVc(st.v0)-8,'#c07884',10,'right');
+      line(c,pxR(st.r),top,pxR(st.r),bot,'#e8edf2',1,[3,3]);dot(c,pxR(st.r),pyVc(st.model==='string'?Math.sqrt(5*G*st.r):2*Math.sqrt(G*st.r)),5,'#D0C4E8','#fff');
     }
     function set(k,v){var e=q('[data-read="'+k+'"]');if(e)e.textContent=v;}
     function update(){
-      var th=st.angle,v=vAt(th),Fc=st.mass*v*v/st.r,om=v/st.r;
-      var alpha=Math.PI-th;var radial=st.mass*G*Math.cos(alpha);
-      var T=Fc-radial;
+      var det=st.detached&&st.proj,v=det?Math.sqrt(st.proj.vx*st.proj.vx+st.proj.vy*st.proj.vy):vAt(st.angle);
+      var Fc=det?0:st.mass*v*v/st.r,om=det?0:v/st.r;
+      var radial=st.mass*G*Math.cos(Math.PI-st.angle);   // = −mg cosθ
+      var rawT=Fc-radial,T=st.model==='string'?Math.max(0,rawT):rawT,slack=st.model==='string'&&rawT<=0;
       var vtop=Math.sqrt(Math.max(0,st.v0*st.v0-4*G*st.r));
-      set('v',v.toFixed(2));set('Fc',Fc.toFixed(2));set('omega',om.toFixed(2));set('Tperiod',(2*Math.PI/Math.max(.1,om)).toFixed(2));set('vtop',vtop.toFixed(2));set('T',T.toFixed(2));
-      if(extIndex===1){var mx=Math.max(1,Fc,Math.abs(radial),Math.abs(T)),vals={need:Fc,grav:radial,tens:T};Object.keys(vals).forEach(function(k){var b=q('[data-bar="'+k+'"]'),e=q('[data-barval="'+k+'"]');if(b)b.style.width=Math.min(100,Math.abs(vals[k])/mx*100).toFixed(1)+'%';if(e)e.textContent=vals[k].toFixed(1);});}
+      set('v',v.toFixed(2));set('Fc',Fc.toFixed(2));set('omega',om.toFixed(2));set('Tperiod',(2*Math.PI/Math.max(.1,om)).toFixed(2));set('vtop',vtop.toFixed(2));set('T',slack?'0（绳松弛）':T.toFixed(2));
+      if(extIndex===1){var mx=Math.max(1,Fc,Math.abs(radial),Math.abs(T)),vals={need:Fc,grav:radial,tens:slack?0:T};Object.keys(vals).forEach(function(k){var b=q('[data-bar="'+k+'"]'),e=q('[data-barval="'+k+'"]');if(b)b.style.width=Math.min(100,Math.abs(vals[k])/mx*100).toFixed(1)+'%';if(e)e.textContent=vals[k].toFixed(1);});}
     }
     var raf=0;
     function loop(now){if(!st.last)st.last=now;var dt=Math.min(.04,(now-st.last)/1000);st.last=now;
-      if(st.running&&!st.manual){var v=vAt(st.angle);if(v<0.08)st.dir*=-1;st.angle+=st.dir*v/Math.max(.3,st.r)*dt;
-        if(st.angle>2*Math.PI){if(canLoop())st.angle-=2*Math.PI;else st.dir=-1;}
-        if(st.angle<0)st.angle=0;}
+      if(st.running&&!st.manual){
+        if(st.detached&&st.proj){
+          st.proj.vy+=G*dt;st.proj.x+=st.proj.vx*dt;st.proj.y+=st.proj.vy*dt;
+          if(st.proj.y>st.r+1.2||Math.abs(st.proj.x)>st.r*2.5)resetMotion();
+        }else{
+          var v=vAt(st.angle),td=detachAngle(),lim=canLoop()?null:swingAngle();
+          if(td!==null&&st.dir>0&&st.angle>=td)beginDetach(td);
+          else{
+            if(lim!==null&&st.angle>=lim-1e-3&&st.dir>0)st.dir=-1;
+            if(v<0.08&&st.angle>0.01&&st.angle<Math.PI)st.dir=-1;
+            st.angle+=st.dir*v/Math.max(.3,st.r)*dt;
+            if(st.angle>=P2){if(canLoop())st.angle-=P2;else st.dir=-1;}
+            if(st.angle<=0){st.angle=0;st.dir=1;}
+          }
+        }
+        var deg=Math.round(st.angle*180/Math.PI),sl=q('[data-slider="angle"]'),out=q('[data-out="angle"]');
+        if(sl&&global.document&&global.document.activeElement!==sl)sl.value=String(deg);
+        if(out)out.textContent=String(deg);
+      }
       drawStage();drawChart();update();raf=global.requestAnimationFrame(loop);}
     raf=global.requestAnimationFrame(loop);
     return function cleanup(){global.cancelAnimationFrame(raf);dis.forEach(function(f){f();});dis.length=0;container.innerHTML='';};
