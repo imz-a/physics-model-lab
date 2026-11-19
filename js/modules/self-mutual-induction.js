@@ -40,15 +40,15 @@
   function build(idx,s){
     var ex='';
     if(idx===1)ex='<div class="si-card"><div class="si-t"><i style="background:var(--sky,#BFE3F5)"></i>I — t 暂态曲线</div><div data-chart></div><div class="si-rel"><div><span>时间常数 τ = L/R</span><b data-r="tau">—</b></div><div><span>稳态电流 I₀ = V/R</span><b data-r="i0">—</b></div><div><span>经过 5τ 后电流</span><b data-r="five">—</b></div></div><div class="si-n">τ 越大（L 大或 R 小），电流建立/衰减越慢；5τ 后暂态基本结束。</div></div>'
-      +'<div class="si-card"><div class="si-t"><i style="background:var(--lav,#D0C4E8)"></i>自感的"阻碍"</div><div class="si-f">通电瞬间：电流想增大，自感电动势方向与电源相反，电流<b>逐渐增大</b>；<br>断电瞬间：电流想减小，自感电动势与原电流同向，电流<b>逐渐减小</b>（可能使灯泡闪亮）。<br><b>ε自 = −L·ΔI/Δt</b></div></div>';
+      +'<div class="si-card"><div class="si-t"><i style="background:var(--lav,#D0C4E8)"></i>自感的"阻碍"</div><div class="si-f">通电瞬间：电流想增大，自感电动势方向与电源相反，电流<b>逐渐增大</b>；<br>断电瞬间：电流想减小，自感电动势与原电流同向，电流<b>逐渐减小</b>，与线圈串联的灯泡随之<b>渐暗</b>。<br><b>ε自 = −L·ΔI/Δt</b></div></div>';
     else if(idx===2)ex='<div class="si-card"><div class="si-t"><i style="background:var(--peach,#FFD8A8)"></i>磁场能与焦耳热</div>'
       +'<div class="si-bar"><div class="si-bar__t"><span>磁场能 W = ½LI²</span><b data-barv="mag">—</b></div><div class="si-bar__k"><div class="si-bar__f" data-bar="mag" style="background:var(--lav,#D0C4E8)"></div></div></div>'
       +'<div class="si-bar"><div class="si-bar__t"><span>电阻累计热 Q = ∫I²R dt</span><b data-barv="heat">—</b></div><div class="si-bar__k"><div class="si-bar__f" data-bar="heat" style="background:var(--peach,#FFD8A8)"></div></div></div>'
       +'<div class="si-n">通电时电源做功一部分存为磁场能、一部分变成热；断电时磁场能通过自感电流全部释放为热。</div><div class="si-rel"><div><span>稳态磁场能 ½LI₀²</span><b data-r="wmax">—</b></div></div></div>'
-      +'<div class="si-card"><div class="si-t"><i style="background:var(--mint,#B8E8D0)"></i>能量守恒</div><div class="si-f">电源提供的能量 = 磁场能增量 + 电阻发热<br>开关断开后电源支路断路，但<b>线圈与灯泡、电阻构成闭合的放电回路</b>，磁场能 ½LI² 继续驱动电流经灯泡释放，最终全部转化为热与光（灯泡逐渐熄灭）。</div></div>';
+      +'<div class="si-card"><div class="si-t"><i style="background:var(--mint,#B8E8D0)"></i>能量守恒</div><div class="si-f">电源提供的能量 = 磁场能增量 + 电阻发热<br>开关断开后电源被旁路导线短接，但<b>线圈、灯泡与电阻仍构成闭合的放电回路</b>，磁场能 ½LI² 继续驱动电流经灯泡释放，最终全部转化为热与光（灯泡逐渐熄灭）。</div></div>';
     else if(idx===3)ex='<div class="si-card"><div class="si-t"><i style="background:var(--pink,#FFB3BA)"></i>高考题型 · 两题限时</div>'+quiz()+'<div class="si-n">题目随 L、R 与开关状态实时更新，提交后即时判分。</div></div>';
-    else ex='<div class="si-card"><div class="si-t"><i style="background:var(--cream,#FFF3BF)"></i>自感现象</div><div class="si-f">线圈中电流变化时，自身产生感应电动势阻碍电流变化：<br><b>ε自 = −L·ΔI/Δt</b>，<b>τ = L/R</b>。<br>通电：灯泡慢慢变亮；断电：灯泡慢慢熄灭（甚至闪亮一下）。</div></div>'
-      +'<div class="si-card"><div class="si-t"><i style="background:var(--sky,#BFE3F5)"></i>互感现象</div><div class="si-f">一个线圈电流变化，使邻近另一线圈磁通量变化而产生感应电动势：<br><b>ε₂ = −M·ΔI₁/Δt</b>。<br>图中下方副线圈的箭头表示互感电流方向，总是阻碍原磁通的变化。</div></div>';
+    else ex='<div class="si-card"><div class="si-t"><i style="background:var(--cream,#FFF3BF)"></i>自感现象</div><div class="si-f">线圈与灯泡、电阻串联。线圈中电流变化时，自身产生感应电动势阻碍电流变化：<br><b>ε自 = −L·ΔI/Δt</b>，<b>τ = L/R</b>。<br>通电：灯泡由暗渐亮（电流按 I₀(1−e^(−t/τ)) 增长）；断电：电源被旁路，线圈、灯泡、电阻构成闭合回路，电流按 I₀·e^(−t/τ) 衰减，灯泡慢慢熄灭。</div></div>'
+      +'<div class="si-card"><div class="si-t"><i style="background:var(--sky,#BFE3F5)"></i>互感现象</div><div class="si-f">一个线圈电流变化，使邻近另一线圈磁通量变化而产生感应电动势：<br><b>ε₂ = −M·ΔI₁/Δt</b>。<br>图中主线圈旁的副线圈箭头表示互感电流方向，总是阻碍原磁通的变化。</div></div>';
     return '<div class="si-w"><div class="si-bar"><span class="si-chip">电磁感应 · 自感与互感</span><div class="si-seg" data-seg="sw"><button data-val="on" class="'+(s.on?'is-on':'')+'">闭合开关</button><button data-val="off" class="'+(!s.on?'is-on':'')+'">断开开关</button></div><span class="si-sp"></span><button class="si-btn si-btn--p" data-play>'+(s.playing?'⏸ 暂停':'▶ 播放')+'</button><button class="si-btn" data-reset>↺ 重置</button></div>'
       +'<div class="si-grid"><div class="si-card"><div class="si-t"><i></i>含线圈与灯泡的电路<span class="si-hint">灯泡亮度随电流实时变化</span></div><div data-cv></div></div>'
       +'<div class="si-side"><div class="si-card"><div class="si-t"><i style="background:var(--pink,#FFB3BA)"></i>参数</div>'
@@ -91,52 +91,59 @@
 
     function draw(st){
       ctx.clearRect(0,0,W,H);
-      // 物理自洽结构：线圈 L 与「灯泡+R」并联在上下两节点间；电源+开关在左侧充电支路。
-      // 闭合→电源经开关给线圈通电；断开→电源支路断路，但线圈与灯泡+R 仍构成闭合放电回路。
-      var xMid=470,xL=150,xR=850,yT=110,yB=330;
-      var colCharge=s.on?C.ink2:'#c9d2dc';   // 充电支路（断开时淡出）
-      var colDis=s.on?'#cbd5e1':C.mintD;      // 放电支路（断开时高亮）
-      // 上、下公共节点
+      // 物理自洽结构：电源(6V)、开关 S、线圈 L、电阻 R、灯泡 串联成单一回路。
+      // 闭合 S：电源接入，I(t)=I0(1−e^{−t/τ})，与线圈串联的灯泡由暗渐亮；
+      // 断开 S：电源被旁路导线替代，L–灯泡–R 仍为闭合回路，I(t)=I0·e^{−t/τ} 逐渐减小、灯泡渐暗。
+      // 两阶段回路总电阻均为 R，故 I0=6/R、τ=L/R 同时适用于充电与放电两个阶段。
+      var xL=200,xR=820,xCL=360,xCR=520,xRA=490,xRB=700,yT=110,yB=330;
+      var yMid=(yT+yB)/2;
+      var colSrc=s.on?C.ink2:'#c9d2dc';   // 电源/开关支路（断开时淡出）
+      // 主回路导线（上、右、下三边始终导通）
+      ctx.save();ctx.strokeStyle=C.ink2;ctx.lineWidth=3;ctx.lineJoin='round';ctx.beginPath();
+      ctx.moveTo(xL,yT);ctx.lineTo(xCL,yT);ctx.stroke();ctx.restore();
+      // 线圈 L（上边绕组）
+      ctx.save();ctx.strokeStyle=C.lavD;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xCL,yT);
+      var nCoil=5,dCoil=(xCR-xCL)/nCoil;
+      for(var ci=0;ci<nCoil;ci++)ctx.arc(xCL+dCoil*(ci+0.5),yT,dCoil/2,Math.PI,0,false);
+      ctx.stroke();ctx.restore();
+      label(ctx,'线圈 L = '+nf(s.L)+' H',(xCL+xCR)/2,yT-18,C.lavD,'center');
       ctx.save();ctx.strokeStyle=C.ink2;ctx.lineWidth=3;ctx.beginPath();
-      ctx.moveTo(xL,yT);ctx.lineTo(xR,yT);ctx.moveTo(xL,yB);ctx.lineTo(xR,yB);ctx.stroke();ctx.restore();
-      // 左侧充电支路：电源 + 开关
-      ctx.save();ctx.strokeStyle=colCharge;ctx.lineWidth=3;ctx.beginPath();
-      ctx.moveTo(xL,yT);ctx.lineTo(xL,yB);ctx.stroke();ctx.restore();
-      // 电源（左侧支路下部）
-      ctx.save();ctx.strokeStyle=C.pinkD;ctx.lineWidth=3;ctx.beginPath();
-      ctx.moveTo(xL-13,yT+175);ctx.lineTo(xL+13,yT+175);ctx.moveTo(xL-6,yT+197);ctx.lineTo(xL+6,yT+197);ctx.stroke();ctx.restore();
-      label(ctx,'6 V',xL-22,yT+192,C.pinkD,'right');
-      // 开关（左侧支路上部，单刀：闭合接通电源支路）
-      ctx.save();ctx.strokeStyle=s.on?C.mintD:C.pinkD;ctx.lineWidth=4;ctx.beginPath();
-      ctx.moveTo(xL,yT+70);ctx.lineTo(xL+32,yT+70-(s.on?0:26));ctx.stroke();ctx.restore();
-      ctx.save();ctx.fillStyle=s.on?C.mintD:C.pinkD;ctx.beginPath();ctx.arc(xL,yT+70,5,0,Math.PI*2);ctx.arc(xL+32,yT+70,5,0,Math.PI*2);ctx.fill();ctx.restore();
-      label(ctx,s.on?'开关S 闭合':'开关S 断开',xL+50,yT+56,s.on?C.mintD:C.pinkD);
-      // 线圈 L（中间竖直支路，两回路公共元件）
-      ctx.save();ctx.strokeStyle=C.lavD;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xMid,yT);
-      for(var i=0;i<5;i++)ctx.arc(xMid,yT+45+i*24,13,Math.PI,0,false);
-      ctx.lineTo(xMid,yB);ctx.stroke();ctx.restore();
-      label(ctx,'线圈 L = '+nf(s.L)+' H',xMid,yT-16,C.lavD,'center');
-      // 右侧放电支路：灯泡 + 电阻 R（与线圈构成闭合回路，开关断开仍导通）
-      ctx.save();ctx.strokeStyle=colDis;ctx.lineWidth=3;ctx.beginPath();
-      ctx.moveTo(xR,yT);ctx.lineTo(xR,yB);ctx.stroke();ctx.restore();
-      var bright=Math.min(1,st.I/(6/s.R)),gx=xR,gy=(yT+yB)/2;
+      ctx.moveTo(xCR,yT);ctx.lineTo(xR,yT);
+      ctx.moveTo(xR,yT);ctx.lineTo(xR,yMid-24);
+      ctx.moveTo(xR,yMid+24);ctx.lineTo(xR,yB);
+      ctx.stroke();ctx.restore();
+      // 灯泡（右边，与线圈、R 串联）
+      var bright=Math.min(1,st.I/(6/s.R)),gx=xR,gy=yMid;
       ctx.save();var grd=ctx.createRadialGradient(gx,gy,3,gx,gy,60);grd.addColorStop(0,'rgba(255,227,140,'+(.12+bright*.78)+')');grd.addColorStop(1,'rgba(255,227,140,0)');ctx.fillStyle=grd;ctx.beginPath();ctx.arc(gx,gy,60,0,Math.PI*2);ctx.fill();ctx.restore();
-      ctx.save();ctx.fillStyle=bright>.05?'#FFF3BF':'#fff';ctx.strokeStyle=C.ink2;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(gx,gy,20,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.beginPath();ctx.moveTo(gx-11,gy+11);ctx.lineTo(gx+11,gy-11);ctx.moveTo(gx-11,gy-11);ctx.lineTo(gx+11,gy+11);ctx.stroke();ctx.restore();
-      label(ctx,'灯泡',gx+30,gy+5,C.ink2);
-      // 电阻 R（下边右侧）
-      ctx.save();ctx.strokeStyle=colDis;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xMid+150,yB);
-      for(var k=0;k<7;k++)ctx.lineTo(xMid+160+k*18,yB+(k%2?12:-12));
-      ctx.lineTo(xMid+290,yB);ctx.stroke();ctx.restore();
-      label(ctx,'R = '+nf(s.R)+' Ω',xMid+225,yB+34,C.peachD,'center');
-      // 电流流动点：闭合沿充电回路，断开沿线圈-灯泡-电阻放电回路
+      ctx.save();ctx.fillStyle=bright>.05?'#FFF3BF':'#fff';ctx.strokeStyle=C.ink2;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(gx,gy,22,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(gx-12,gy+12);ctx.lineTo(gx+12,gy-12);ctx.moveTo(gx-12,gy-12);ctx.lineTo(gx+12,gy+12);ctx.stroke();ctx.restore();
+      label(ctx,'灯泡',gx+34,gy+5,C.ink2);
+      // 电阻 R（下边，与线圈串联）
+      ctx.save();ctx.strokeStyle=C.ink2;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xR,yB);ctx.lineTo(xRB,yB);
+      for(var rk=0;rk<7;rk++)ctx.lineTo(xRB-(rk+1)*(xRB-xRA)/7,yB+(rk%2?14:-14));
+      ctx.lineTo(xL,yB);ctx.stroke();ctx.restore();
+      label(ctx,'R = '+nf(s.R)+' Ω',(xRA+xRB)/2,yB+34,C.peachD,'center');
+      // 左边支路：电源 6V（下部）+ 开关 S（上部），断开时淡出
+      ctx.save();ctx.strokeStyle=colSrc;ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(xL,yB);ctx.lineTo(xL,yMid+72);ctx.moveTo(xL,yMid+52);ctx.lineTo(xL,yT+55);ctx.lineTo(xL,yT);ctx.stroke();ctx.restore();
+      ctx.save();ctx.strokeStyle=C.pinkD;ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(xL-14,yMid+52);ctx.lineTo(xL+14,yMid+52);ctx.moveTo(xL-7,yMid+72);ctx.lineTo(xL+7,yMid+72);ctx.stroke();ctx.restore();
+      label(ctx,'6 V',xL-24,yMid+68,C.pinkD,'right');
+      ctx.save();ctx.strokeStyle=s.on?C.mintD:C.pinkD;ctx.lineWidth=4;ctx.beginPath();
+      ctx.moveTo(xL,yT+55);ctx.lineTo(xL+34,yT+55-(s.on?0:26));ctx.stroke();ctx.restore();
+      ctx.save();ctx.fillStyle=s.on?C.mintD:C.pinkD;ctx.beginPath();ctx.arc(xL,yT+55,5,0,Math.PI*2);ctx.arc(xL+34,yT+55,5,0,Math.PI*2);ctx.fill();ctx.restore();
+      label(ctx,s.on?'开关S 闭合（电源接入）':'开关S 断开（电源旁路）',xL+52,yT+40,s.on?C.mintD:C.pinkD);
+      // 断开时的旁路导线：把电源+开关整体旁路，使 L–灯泡–R 保持闭合（电流方向不翻转，楞次定律）
+      if(!s.on){
+        ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=3;ctx.setLineDash([6,4]);ctx.beginPath();
+        ctx.moveTo(xL,yT);ctx.lineTo(110,yT);ctx.lineTo(110,yB);ctx.lineTo(xL,yB);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+        label(ctx,'续流回路（电源已旁路）',110,yB+18,C.mintD,'center');
+      }
+      // 电流流动点：闭合沿电源回路，断开沿续流回路（方向不变）
       if(st.I>.002){
-        var n=18,spd=Math.min(.5,st.I*.08),pts=[];
-        if(s.on){ // 充电回路：电源→上节点→线圈(下)→下节点→电源
-          pts=[[xL,yT],[xMid,yT],[xMid,yB],[xL,yB],[xL,yT]];
-        }else{ // 放电回路：线圈上端→下节点→R→灯泡→上节点→线圈上端
-          pts=[[xMid,yT],[xMid,yB],[xMid+290,yB],[xR,yB],[xR,yT],[xMid,yT]];
-        }
+        var n=20,spd=Math.min(.5,st.I*.08),pts=s.on
+          ? [[xL,yT],[xCR,yT],[xR,yT],[xR,yB],[xRA,yB],[xL,yB],[xL,yT]]
+          : [[xL,yT],[xCR,yT],[xR,yT],[xR,yB],[xRA,yB],[xL,yB],[110,yB],[110,yT],[xL,yT]];
         var segs=[],tot=0;
         for(var q0=0;q0<pts.length-1;q0++){var d0=Math.hypot(pts[q0+1][0]-pts[q0][0],pts[q0+1][1]-pts[q0][1]);segs.push(d0);tot+=d0;}
         for(var p0=0;p0<n;p0++){
@@ -144,19 +151,20 @@
           for(var q1=0;q1<segs.length;q1++){if(f<=acc+segs[q1]){var u=(f-acc)/segs[q1];px=pts[q1][0]+(pts[q1+1][0]-pts[q1][0])*u;py=pts[q1][1]+(pts[q1+1][1]-pts[q1][1])*u;break;}acc+=segs[q1];}
           ctx.save();ctx.fillStyle=C.skyD;ctx.beginPath();ctx.arc(px,py,3.5,0,Math.PI*2);ctx.fill();ctx.restore();
         }
-        label(ctx,'I='+nf(st.I)+' A',xMid-60,yT-16,C.skyD,'center');
+        label(ctx,'I='+nf(st.I)+' A',xCL-70,yT-16,C.skyD,'center');
       }
-      // 副线圈（互感，画在线圈旁）
+      // 副线圈（互感，画在主线圈附近）
+      var xSec=(xCL+xCR)/2;
       ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.5;ctx.beginPath();
-      for(var m=0;m<5;m++)ctx.arc(xMid+52,yT+45+m*24,11,Math.PI/2,Math.PI*1.5,false);
+      for(var m=0;m<5;m++)ctx.arc(xSec,yT+50+m*20,11,Math.PI/2,Math.PI*1.5,false);
       ctx.stroke();ctx.restore();
-      label(ctx,'副线圈（互感）',xMid+110,yT+170,C.mintD);
+      label(ctx,'副线圈（互感）',xSec+72,yT+165,C.mintD);
       if(Math.abs(st.dI)>.002){
         var dir=st.dI>0?-1:1;
-        arrow(ctx,xMid+110,yT+150,xMid+110+dir*60,yT+150,C.mintD);
-        label(ctx,'ε₂ ∝ −ΔI₁/Δt',xMid+120,yT+135,C.mintD);
+        arrow(ctx,xSec+72,yT+132,xSec+72+dir*55,yT+132,C.mintD);
+        label(ctx,'ε₂ ∝ −ΔI₁/Δt',xSec+82,yT+120,C.mintD);
       }
-      label(ctx,s.on?'闭合：电源给线圈通电，电流逐渐增大':'断开：电源支路断路，线圈与灯泡构成闭合放电回路，电流逐渐减小',24,H-12,s.on?C.lavD:C.mintD);
+      label(ctx,s.on?'闭合：电源接入串联回路，电流按 τ=L/R 由零增大，灯泡渐亮':'断开：电源被旁路，线圈与灯泡、R 构成闭合回路，电流渐减、灯泡渐暗',24,H-12,s.on?C.lavD:C.mintD);
     }
     function curvePath(ctx,on,Tau,I0,X,Y){
       ctx.beginPath();
