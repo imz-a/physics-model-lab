@@ -20,6 +20,8 @@
   var saved = { B: 1.0, q: 2, m: 12, v: 3.0, sign: 1, bdir: -1, rev: 0.4, playing: true, W: 0.30, H: 0.46 };
   var QE = 1.602e-19, UU = 1.6605e-27;
   var CIRCLE = Math.PI * 2;
+  var VIEW_R = 0.8;                 // 固定显示半径（m），绝不随当前 r 归一化
+  var F_REF = QE * 6e6 * 3;         // 洛伦兹力箭头的固定参考量程（N）
   var STYLE_ID = 'ml-cpm-style';
 
   var CSS = ''
@@ -138,29 +140,52 @@
   function drawOrbit(view, d, s, theta) {
     var ctx = view.ctx, W = view.w, H = view.h;
     ctx.clearRect(0, 0, W, H);
-    var hv = Math.max(0.24, d.r * 1.32);
     var pad = 16, pw = W - pad * 2, ph = H - pad * 2;
-    var scale = Math.min(pw / (2 * hv), ph / (2 * hv));
+    // 固定绝对量程：圆在屏幕上的半径 = r × 固定比例，B、v、m、q 一改必然同步变化
+    var scale = Math.min(pw / (2 * VIEW_R), ph / (2 * VIEW_R));
     var ox = pad + pw / 2, oy = pad + ph / 2;
     function PX(x) { return ox + x * scale; }
     function PY(y) { return oy - y * scale; }
-    var sign = d.wSigned > 0 ? 1 : -1;
+    var sign = d.wSigned > 0 ? 1 : -1;   // +1：qB>0 顺时针；−1：qB<0 逆时针
 
-    // 磁场符号网格
-    for (var gx = -hv * .93; gx <= hv * .93; gx += hv / 5) {
-      for (var gy = -hv * .78; gy <= hv * .78; gy += hv / 5) {
-        if (Math.abs(Math.sqrt(gx * gx + gy * gy) - d.r) < hv / 14) continue;
+    // 坐标轴与固定刻度（单位 m）
+    ctx.save(); ctx.strokeStyle = '#e6ecf3'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PX(-VIEW_R), oy); ctx.lineTo(PX(VIEW_R), oy);
+    ctx.moveTo(ox, PY(-VIEW_R)); ctx.lineTo(ox, PY(VIEW_R)); ctx.stroke(); ctx.restore();
+    for (var tk = -4; tk <= 4; tk++) {
+      if (!tk) continue;
+      var tv = tk * 0.2;
+      ctx.save(); ctx.strokeStyle = '#e9eef4';
+      ctx.beginPath(); ctx.moveTo(PX(tv), oy - 4); ctx.lineTo(PX(tv), oy + 4);
+      ctx.moveTo(ox - 4, PY(tv)); ctx.lineTo(ox + 4, PY(tv)); ctx.stroke(); ctx.restore();
+      label(ctx, tv.toFixed(1), PX(tv), oy + 17, C.ink3, 'center');
+      label(ctx, tv.toFixed(1), ox - 7, PY(tv) + 4, C.ink3, 'right');
+    }
+    label(ctx, 'x / m', PX(VIEW_R) - 2, oy + 33, C.ink2, 'right');
+    label(ctx, 'y / m', ox + 8, PY(VIEW_R) + 4, C.ink2);
+
+    // 磁场符号网格（固定密度，× 向里 / · 向外）
+    for (var gx = -VIEW_R * .93; gx <= VIEW_R * .93; gx += VIEW_R / 5) {
+      for (var gy = -VIEW_R * .78; gy <= VIEW_R * .78; gy += VIEW_R / 5) {
+        if (Math.abs(Math.sqrt(gx * gx + gy * gy) - d.r) < VIEW_R / 16) continue;
         fieldSymbol(ctx, PX(gx), PY(gy), s.bdir > 0, 6);
       }
     }
     label(ctx, s.bdir > 0 ? 'B 垂直纸面向外（·）' : 'B 垂直纸面向里（×）', 22, 24, C.lavD);
     label(ctx, '动画慢放 ×' + (d.slow >= 1e4 ? (d.slow / 1e6).toFixed(2) + '×10⁶' : nf(d.slow)), W - 20, 24, C.ink3, 'right');
 
-    // 完整圆（虚线参考）
+    // 变化前的灰色虚线参考圆（快照，不随当前参数变）
+    if (s.refR != null) {
+      ctx.save(); ctx.setLineDash([7, 6]); ctx.strokeStyle = '#aeb8c6'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ox, oy, s.refR * scale, 0, CIRCLE); ctx.stroke(); ctx.restore();
+      label(ctx, '变化前 r = ' + nf(s.refR) + ' m（灰虚线）', 22, 44, '#8b95a3');
+    }
+    // 当前理论完整圆（淡紫虚线）
     ctx.save(); ctx.setLineDash([6, 7]); ctx.strokeStyle = '#D8CCEE'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(ox, oy, d.r * scale, 0, CIRCLE); ctx.stroke(); ctx.restore();
+    if (d.r > VIEW_R) label(ctx, '当前 r 超出固定显示量程 ' + VIEW_R + ' m，圆被画布裁切', W - 20, 44, C.pinkD, 'right');
 
-    // 拖尾圆弧
+    // 拖尾圆弧：θ 的增减方向由 qB 符号决定
     ctx.save(); ctx.strokeStyle = C.pinkD; ctx.lineWidth = 5; ctx.lineCap = 'round';
     var span = 2.05, steps = 64;
     ctx.beginPath();
@@ -178,43 +203,47 @@
     var px = d.r * Math.sin(theta), py = d.r * Math.cos(theta);
     ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = C.lavD; ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(PX(px), PY(py)); ctx.stroke(); ctx.restore();
-    label(ctx, 'r', (ox + PX(px)) / 2 + 6, (oy + PY(py)) / 2 - 5, C.lavD);
+    label(ctx, 'r = ' + nf(d.r) + ' m', (ox + PX(px)) / 2 + 6, (oy + PY(py)) / 2 - 5, C.lavD);
 
-    // 入射点 / 入射速度
-    var entryY = d.r;
-    fieldSymbol(ctx, PX(0), PY(entryY), false, 0); // 占位以保持坐标更新
+    // 入射点：qB>0 从上端水平向右射入（受力向下）；qB<0 从下端水平向右射入（受力向上）
+    var entryY = sign > 0 ? d.r : -d.r;
     ctx.save(); ctx.fillStyle = C.mintD;
     ctx.beginPath(); ctx.arc(PX(0), PY(entryY), 4, 0, CIRCLE); ctx.fill(); ctx.restore();
-    label(ctx, 'v₀ 射入', PX(0) + 8, PY(entryY) - 10, C.mintD);
+    arrow(ctx, PX(0) - 46, PY(entryY), PX(0) - 7, PY(entryY), C.mintD, 'v₀', 2.2);
 
-    // 粒子、速度、洛伦兹力（力指向圆心）
+    // 粒子、速度、洛伦兹力（力恒指向圆心，与 sign 无关）
     var X = PX(px), Y = PY(py);
     ctx.save(); ctx.fillStyle = '#fff'; ctx.strokeStyle = C.pinkD; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(X, Y, 8, 0, CIRCLE); ctx.fill(); ctx.stroke();
     ctx.fillStyle = C.pinkD; ctx.beginPath(); ctx.arc(X, Y, 3.4, 0, CIRCLE); ctx.fill(); ctx.restore();
-    var vlen = Math.min(110, 62 + d.v * 12);
-    var vx = Math.cos(theta), vy = -Math.sin(theta);
+    var vlen = Math.min(110, 40 + d.v * 12);
+    var vx = sign * Math.cos(theta), vy = -sign * Math.sin(theta);
     arrow(ctx, X, Y, X + vx * vlen, Y + vy * vlen, C.mintD, 'v', 2.6);
-    var fdirx = -Math.sin(theta) * sign, fdiry = -Math.cos(theta) * sign;
-    arrow(ctx, X, Y, X + fdirx * 54, Y + fdiry * 54, C.pinkD, 'F', 2.4);
+    var fdirx = -Math.sin(theta), fdiry = -Math.cos(theta);
+    var flen = 22 + 60 * Math.min(1, d.F / F_REF);
+    arrow(ctx, X, Y, X + fdirx * flen, Y + fdiry * flen, C.pinkD, 'F', 2.4);
 
     label(ctx, d.cw ? '转向：顺时针' : '转向：逆时针', 22, H - 12, C.lavD);
-    label(ctx, d.cw ? 'qB > 0' : 'qB < 0', W - 20, H - 12, C.ink3, 'right');
+    label(ctx, '绿：v  粉：F(洛伦兹力)  淡紫虚线：完整圆', W - 20, H - 12, C.ink3, 'right');
   }
 
   /* ---------------- 边界问题画布 ---------------- */
   function boundaryPath(d, s) {
     var Wf = s.W, Hf = s.H, sign = d.wSigned > 0 ? 1 : -1, r = d.r;
-    var pts = [], thetaMax = sign * CIRCLE, N = 420, exitI = -1;
+    // 入射速度恒沿 +x：φ 单调增大时 x=r·sinφ 先向右；y 的弯曲方向由 qB 符号决定
+    // sign>0（qB>0）受力向下 → y<0；sign<0（qB<0）受力向上 → y>0
+    var pts = [], thMax = CIRCLE, N = 420, exitI = -1;
     for (var i = 0; i <= N; i++) {
-      var th = thetaMax * i / N;
-      var x = r * Math.sin(th), y = r * (Math.cos(th) - 1);
+      var th = thMax * i / N;
+      var x = r * Math.sin(th), y = sign * r * (Math.cos(th) - 1);
       pts.push({ x: x, y: y, th: th });
+      // x<0 表示转过半圈后从入射边界返回（r 小于场宽/2 时的常规情形）
       if (exitI < 0 && i > 0 && (x > Wf || x < -1e-6 || Math.abs(y) > Hf / 2)) exitI = i;
     }
     if (exitI > 0) pts.length = exitI + 1;
     var last = pts[pts.length - 1];
-    var vx = Math.cos(last.th), vy = -Math.sin(last.th);
+    // 切线方向：dx/dφ=r·cosφ，dy/dφ=−sign·r·sinφ
+    var vx = Math.cos(last.th), vy = -sign * Math.sin(last.th);
     var ext = 0.34, M = 30;
     for (var j = 1; j <= M; j++) pts.push({ x: last.x + vx * ext * j / M, y: last.y + vy * ext * j / M, th: last.th, out: true });
     return { pts: pts, exitI: exitI, exit: last, arcLen: (exitI > 0 ? Math.abs(last.th) * r : 0), dir: { x: vx, y: vy } };
@@ -242,6 +271,16 @@
     label(ctx, '有界匀强磁场  ' + s.W.toFixed(2) + ' m × ' + s.H.toFixed(2) + ' m', PX(0), PY(s.H / 2) - 9, C.lavD);
     label(ctx, '无场区', PX(s.W) + 10, PY(s.H / 2) - 9, C.ink3);
 
+    // 变化前轨迹（灰色虚线参考，来自参数快照）
+    if (s.ref) {
+      var rd = derive({ B: s.ref.B, q: s.ref.q, m: s.ref.m, v: s.ref.v, sign: s.sign, bdir: s.bdir, rev: s.rev });
+      var rp = boundaryPath(rd, s).pts;
+      ctx.save(); ctx.strokeStyle = '#aeb8c6'; ctx.lineWidth = 2; ctx.setLineDash([5, 6]); ctx.beginPath();
+      for (var ri = 0; ri < rp.length; ri++) { if (!ri) ctx.moveTo(PX(rp[ri].x), PY(rp[ri].y)); else ctx.lineTo(PX(rp[ri].x), PY(rp[ri].y)); }
+      ctx.stroke(); ctx.restore();
+      label(ctx, '变化前 r = ' + nf(rd.r) + ' m（灰虚线）', 22, H - 32, '#8b95a3');
+    }
+
     // 轨迹
     var pts = path.pts, n = pts.length, upto = Math.max(1, Math.floor(prog * (n - 1)));
     ctx.save(); ctx.strokeStyle = '#DED4F0'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
@@ -268,6 +307,14 @@
     ctx.beginPath(); ctx.arc(PX(cur.x), PY(cur.y), 7, 0, CIRCLE); ctx.fill(); ctx.stroke(); ctx.restore();
     label(ctx, '出射偏转 |y| = ' + Math.abs(e.y * 1000).toFixed(1) + ' mm', 22, H - 12, C.lavD);
     label(ctx, '圆心角 = ' + (Math.abs(e.th) * 180 / Math.PI).toFixed(1) + '°', W - 20, H - 12, C.ink3, 'right');
+    // 横纵轴单位 + 绝对刻度尺（固定 0.1 m）
+    label(ctx, 'x / m（向右）· y / m（向上）', W / 2, H - 12, C.ink3, 'center');
+    var barPx = 0.1 * scale, bx0 = W - 20 - barPx;
+    ctx.save(); ctx.strokeStyle = C.ink3; ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.moveTo(bx0, 20); ctx.lineTo(W - 20, 20);
+    ctx.moveTo(bx0, 16); ctx.lineTo(bx0, 24); ctx.moveTo(W - 20, 16); ctx.lineTo(W - 20, 24);
+    ctx.stroke(); ctx.restore();
+    label(ctx, '0.1 m', W - 20 - barPx / 2, 14, C.ink3, 'center');
   }
 
   /* ---------------- 关系曲线 ---------------- */
@@ -289,10 +336,17 @@
       min = 1; max = 20; cv = s.m; title = 'T — m 关系（正比例）'; xt = 'm / u';
       fn = function (v) { return CIRCLE * v * UU / (s.q * QE * s.B); };
     }
-    var ymax = fn(min) > fn(max) ? fn(min) : fn(max);
-    ymax *= 1.15;
+    // 固定绝对量程（不随当前 B、m、q 变）：r 轴 0~6.5 m，T 轴 0~1.4×10⁻⁴ s
+    var ymax = (key === 'Tv' || key === 'Tm') ? 1.4e-4 : 6.5;
     function X(v) { return L + (R - L) * (v - min) / (max - min); }
-    function Y(v) { return B - (B - T) * v / ymax; }
+    function Y(v) { return B - (B - T) * Math.min(1.05, v / ymax); }
+    function refFn(x) {
+      var p = s.ref || s;
+      if (key === 'rv') return p.m * UU * x * 1e6 / (p.q * QE * p.B);
+      if (key === 'rB') return p.m * UU * p.v * 1e6 / (p.q * QE * x);
+      if (key === 'Tv') return CIRCLE * p.m * UU / (p.q * QE * p.B);
+      return CIRCLE * x * UU / (p.q * QE * p.B);
+    }
     ctx.save(); ctx.strokeStyle = '#e8edf2'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, B); ctx.lineTo(R, B); ctx.stroke(); ctx.restore();
     label(ctx, title, L + 4, T + 10, C.lavD);
@@ -302,12 +356,22 @@
       ctx.save(); ctx.strokeStyle = '#f2f5f8'; ctx.beginPath(); ctx.moveTo(L, Y(gy)); ctx.lineTo(R, Y(gy)); ctx.stroke(); ctx.restore();
       label(ctx, key.charAt(0) === 'r' ? nf(gy) : (gy * 1e6).toFixed(1), L - 5, Y(gy) + 4, C.ink3, 'right');
     }
+    // 变化前曲线（灰虚线，来自参数快照）
+    if (s.ref) {
+      ctx.save(); ctx.strokeStyle = '#aeb8c6'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath();
+      for (var ri = 0; ri <= 120; ri++) {
+        var rv = min + (max - min) * ri / 120;
+        if (!ri) ctx.moveTo(X(rv), Y(refFn(rv))); else ctx.lineTo(X(rv), Y(refFn(rv)));
+      }
+      ctx.stroke(); ctx.restore();
+    }
     ctx.save(); ctx.strokeStyle = C.skyD; ctx.lineWidth = 2.6; ctx.beginPath();
     for (var i = 0; i <= 120; i++) {
       var v = min + (max - min) * i / 120;
       if (i === 0) ctx.moveTo(X(v), Y(fn(v))); else ctx.lineTo(X(v), Y(fn(v)));
     }
     ctx.stroke(); ctx.restore();
+    label(ctx, '— 当前   ┄ 变化前', R - 2, T + 10, C.ink3, 'right');
     ctx.save(); ctx.fillStyle = C.pinkD;
     ctx.beginPath(); ctx.arc(X(cv), Y(fn(cv)), 6, 0, CIRCLE); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
@@ -413,7 +477,7 @@
       + '<button class="cpm-btn" type="button" data-act="reset">↺ 重置</button></div>'
       + '<div class="cpm-grid">'
       + '<div class="cpm-card"><div class="cpm-card__t"><i></i>' + (idx === 2 ? '粒子穿出有界磁场' : '磁场中的圆周运动')
-      + '<span class="cpm-card__hint">' + (idx === 2 ? '淡紫区为磁场，出射后沿切线匀速' : '淡紫虚线为完整圆 · 粉色为实际轨迹') + '</span></div>'
+      + '<span class="cpm-card__hint">' + (idx === 2 ? '淡紫区为磁场 · 灰虚线为变化前轨迹 · 出射后沿切线匀速' : '淡紫虚线为完整圆 · 灰虚线为变化前参考圆 · 粉色为实际轨迹') + '</span></div>'
       + '<div data-canvas></div></div>'
       + '<div class="cpm-side">'
       + '<div class="cpm-card"><div class="cpm-card__t"><i style="background:var(--pink,#FFB3BA)"></i>参数调节</div>'
@@ -438,6 +502,10 @@
         B: saved.B, q: saved.q, m: saved.m, v: saved.v, sign: saved.sign, bdir: saved.bdir,
         rev: saved.rev, playing: saved.playing, W: saved.W, H: saved.H, rel: 'rv', theta: 0
       };
+      // 初始参考快照 = 初始参数本身；入射相位由 qB 符号决定（保证水平入射 + 力指向圆心）
+      s.ref = { B: s.B, q: s.q, m: s.m, v: s.v };
+      s.refR = derive(s).r;
+      s.theta = derive(s).wSigned > 0 ? 0 : Math.PI;
       container.innerHTML = buildHtml(idx, s);
       var view = setupCanvas(1000, 440);
       container.querySelector('[data-canvas]').appendChild(view.el);
@@ -466,9 +534,15 @@
       function setRead(k, v) { var e = q1('[data-read="' + k + '"]'); if (e) e.textContent = v; }
 
       var sl = qa('input[type=range]');
+      function snapshot() {
+        s.refR = d0().r;
+        s.ref = { B: s.B, q: s.q, m: s.m, v: s.v };
+      }
       function inputHandler(e) {
-        var k = e.target.getAttribute('data-key'); s[k] = Number(e.target.value);
-        setOutputs(); if (idx === 2 && (k === 'W' || k === 'H')) { /* 边界实时重算 */ } syncSaved();
+        var k = e.target.getAttribute('data-key');
+        snapshot();
+        s[k] = Number(e.target.value);
+        setOutputs(); syncSaved();
       }
       for (var i = 0; i < sl.length; i++) on(listeners, sl[i], 'input', inputHandler);
       var segs = qa('[data-seg]');
@@ -476,13 +550,17 @@
         var b = e.target.closest ? e.target.closest('button') : null; if (!b) return;
         var name = e.currentTarget.getAttribute('data-seg'), val = b.getAttribute('data-val');
         if (name === 'rel') s.rel = val;
-        else { s[name] = name === 'sign' || name === 'bdir' ? Number(val) : val; if (name === 'sign' || name === 'bdir') s.theta = 0; }
+        else {
+          snapshot();
+          s[name] = name === 'sign' || name === 'bdir' ? Number(val) : val;
+          if (name === 'sign' || name === 'bdir') s.theta = d0().wSigned > 0 ? 0 : Math.PI;
+        }
         setSeg(name, val); syncSaved();
       }
       for (var j = 0; j < segs.length; j++) on(listeners, segs[j], 'click', segHandler);
       var pb = q1('[data-act="play"]');
       on(listeners, pb, 'click', function () { s.playing = !s.playing; pb.textContent = s.playing ? '⏸ 暂停' : '▶ 播放'; syncSaved(); });
-      on(listeners, q1('[data-act="reset"]'), 'click', function () { s.theta = 0; prog = 0; });
+      on(listeners, q1('[data-act="reset"]'), 'click', function () { s.theta = d0().wSigned > 0 ? 0 : Math.PI; prog = 0; });
       var ab = q1('[data-act="ans"]');
       if (ab) on(listeners, ab, 'click', function () { var box = q1('[data-ans]'); box.hidden = !box.hidden; ab.textContent = box.hidden ? '查看解析 ▾' : '收起解析 ▴'; });
       var opts = qa('[data-opt]');
@@ -502,8 +580,8 @@
         setRead('slow', d.slow >= 1e4 ? (d.slow / 1e6).toFixed(2) + '×10⁶' : nf(d.slow));
         var st = q1('[data-status]');
         if (st) st.textContent = d.cw
-          ? 'qB > 0：正电荷在「场向里」时顺时针偏转；洛伦兹力指向圆心。'
-          : 'qB < 0：负电荷（或场向外）反向偏转，周期 T 不受影响。';
+          ? 'qB > 0（正电荷+B向外，或负电荷+B向里）：从上端水平射入、受力向下，顺时针；灰虚线为变化前。'
+          : 'qB < 0（正电荷+B向里，或负电荷+B向外）：从下端水平射入、受力向上，逆时针；周期 T 不受影响。';
         if (idx === 1) {
           var r1 = q1('[data-rel="r"]'), r2 = q1('[data-rel="T"]'), r3 = q1('[data-rel="w"]');
           if (r1) r1.textContent = nf(d.r) + ' m';
@@ -548,7 +626,7 @@
         if (dead) return; dead = true;
         global.cancelAnimationFrame(raf);
         for (var t in listeners) {
-          if (!listeners.hasOwnProperty(t)) continue;
+          if (!Object.prototype.hasOwnProperty.call(listeners, t)) continue;
           var a = listeners[t];
           for (var k = 0; k < a.length; k++) a[k][0].removeEventListener(t, a[k][1]);
         }
