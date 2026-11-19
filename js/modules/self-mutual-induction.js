@@ -8,6 +8,9 @@
   var doc=global.document;
   var C={ink:'#3a4250',ink2:'#5a6472',ink3:'#8b95a3',pinkD:'#E27886',mintD:'#57A47F',skyD:'#5B9BC4',lavD:'#8A76BB',peachD:'#D69A55'};
   var saved={L:2.0,R:6.0,on:true,playing:true};
+  var DEFAULTS={L:2.0,R:6.0,on:true};       // 变化前基准（固定）
+  var T_AXIS=30;   // 固定时间量程：τ_max=L_max/R_min=5/1=5s，6τ=30s
+  var I_AXIS=6;    // 固定电流量程：I0_max=6V/R_min=6/1=6A
   var SID='ml-si-style';
   var CSS=''
     +'.si-w{display:flex;flex-direction:column;gap:14px;font-size:16px;color:var(--ink,#3a4250)}.si-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}'
@@ -42,7 +45,7 @@
       +'<div class="si-bar"><div class="si-bar__t"><span>磁场能 W = ½LI²</span><b data-barv="mag">—</b></div><div class="si-bar__k"><div class="si-bar__f" data-bar="mag" style="background:var(--lav,#D0C4E8)"></div></div></div>'
       +'<div class="si-bar"><div class="si-bar__t"><span>电阻累计热 Q = ∫I²R dt</span><b data-barv="heat">—</b></div><div class="si-bar__k"><div class="si-bar__f" data-bar="heat" style="background:var(--peach,#FFD8A8)"></div></div></div>'
       +'<div class="si-n">通电时电源做功一部分存为磁场能、一部分变成热；断电时磁场能通过自感电流全部释放为热。</div><div class="si-rel"><div><span>稳态磁场能 ½LI₀²</span><b data-r="wmax">—</b></div></div></div>'
-      +'<div class="si-card"><div class="si-t"><i style="background:var(--mint,#B8E8D0)"></i>能量守恒</div><div class="si-f">电源提供的能量 = 磁场能增量 + 电阻发热<br>断开后线圈与灯泡构成回路，磁场能 <b>½LI²</b> 继续驱动电流，最终全部转化为热与光。</div></div>';
+      +'<div class="si-card"><div class="si-t"><i style="background:var(--mint,#B8E8D0)"></i>能量守恒</div><div class="si-f">电源提供的能量 = 磁场能增量 + 电阻发热<br>开关断开后电源支路断路，但<b>线圈与灯泡、电阻构成闭合的放电回路</b>，磁场能 ½LI² 继续驱动电流经灯泡释放，最终全部转化为热与光（灯泡逐渐熄灭）。</div></div>';
     else if(idx===3)ex='<div class="si-card"><div class="si-t"><i style="background:var(--pink,#FFB3BA)"></i>高考题型 · 两题限时</div>'+quiz()+'<div class="si-n">题目随 L、R 与开关状态实时更新，提交后即时判分。</div></div>';
     else ex='<div class="si-card"><div class="si-t"><i style="background:var(--cream,#FFF3BF)"></i>自感现象</div><div class="si-f">线圈中电流变化时，自身产生感应电动势阻碍电流变化：<br><b>ε自 = −L·ΔI/Δt</b>，<b>τ = L/R</b>。<br>通电：灯泡慢慢变亮；断电：灯泡慢慢熄灭（甚至闪亮一下）。</div></div>'
       +'<div class="si-card"><div class="si-t"><i style="background:var(--sky,#BFE3F5)"></i>互感现象</div><div class="si-f">一个线圈电流变化，使邻近另一线圈磁通量变化而产生感应电动势：<br><b>ε₂ = −M·ΔI₁/Δt</b>。<br>图中下方副线圈的箭头表示互感电流方向，总是阻碍原磁通的变化。</div></div>';
@@ -81,82 +84,118 @@
       Q[2].ans=s.L/s.R;Q[2].unit='s';Q[2].expl='τ = L/R = '+nf(s.L)+'/'+nf(s.R)+' = '+nf(s.L/s.R)+' s；经过约 5τ 暂态基本结束。';
     }
     function paintQuiz(){if(idx!==3)return;quizData();q('[data-qt="1"]').textContent=Q[1].text;q('[data-qt="2"]').textContent=Q[2].text;q('[data-unit]').textContent=Q[2].unit;var b=q('[data-op="1"]');b.innerHTML='';Q[1].opts.forEach(function(t,i){var x=doc.createElement('button');x.type='button';x.textContent=String.fromCharCode(65+i)+'. '+t;x.setAttribute('data-i',i);b.appendChild(x);});}
-    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');}}
+    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');paintQuiz();}}
     function submit(n){n=Number(n);var fb=q('[data-fb="'+n+'"]');if(n===1){if(sel<0){fb.className='si-fb no';fb.hidden=false;fb.textContent='请先选择。';return;}var ok=sel===Q[1].correct;fb.className='si-fb '+(ok?'ok':'no');fb.hidden=false;fb.innerHTML=(ok?'✅ 正确！':'❌ 再想想。')+Q[1].expl;}
       else{var val=Number(q('[data-num]').value),ok2=isFinite(val)&&Math.abs(val-Q[2].ans)<=Math.max(.01,Math.abs(Q[2].ans)*.05);fb.className='si-fb '+(ok2?'ok':'no');fb.hidden=false;fb.innerHTML=(ok2?'✅ 正确！':'❌ 参考答案 '+nf(Q[2].ans)+' s。')+Q[2].expl;}}
     if(idx===3){paintQuiz();on(LST,q('[data-op="1"]'),'click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(!b)return;sel=Number(b.getAttribute('data-i'));var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.toggle('is-sel',i===sel);});for(var z=0;z<qa('[data-sub]').length;z++){(function(b){on(LST,b,'click',function(){submit(b.getAttribute('data-sub'));});})(qa('[data-sub]')[z]);}}
 
     function draw(st){
       ctx.clearRect(0,0,W,H);
-      var xL=120,xR=830,yT=90,yB=340;
-      // 边框与元件
-      ctx.save();ctx.strokeStyle=C.ink2;ctx.lineWidth=3;ctx.lineJoin='round';ctx.beginPath();
-      ctx.moveTo(xL,yT);ctx.lineTo(xR,yT);ctx.lineTo(xR,yB);ctx.lineTo(xL,yB);ctx.closePath();ctx.stroke();ctx.restore();
-      // 电池
-      ctx.save();ctx.strokeStyle=C.pinkD;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xL-12,yT+50);ctx.lineTo(xL+12,yT+50);ctx.moveTo(xL-6,yT+72);ctx.lineTo(xL+6,yT+72);ctx.stroke();ctx.restore();
-      label(ctx,'6 V',xL-24,yT+66,C.pinkD,'right');
-      // 开关
-      ctx.save();ctx.strokeStyle=C.ink2;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(xL+70,yT);ctx.lineTo(xL+110,yT-(s.on?0:26));ctx.stroke();ctx.restore();
-      ctx.save();ctx.fillStyle=s.on?C.mintD:C.pinkD;ctx.beginPath();ctx.arc(xL+70,yT,5,0,Math.PI*2);ctx.arc(xL+110,yT,5,0,Math.PI*2);ctx.fill();ctx.restore();
-      label(ctx,s.on?'开关 闭合':'开关 断开',xL+90,yT-34,s.on?C.mintD:C.pinkD,'center');
-      // 线圈（ Primary）
-      ctx.save();ctx.strokeStyle=C.lavD;ctx.lineWidth=3;ctx.beginPath();
-      for(var i=0;i<5;i++)ctx.arc(xL+330+i*22,yT,13,Math.PI,0,false);
-      ctx.stroke();ctx.restore();label(ctx,'L = '+nf(s.L)+' H',xL+380,yT-24,C.lavD,'center');
-      // 灯泡（右侧）
-      var bright=Math.min(1,st.I/(6/s.R));
-      var gx=xR,gy=(yT+yB)/2;
-      ctx.save();var grd=ctx.createRadialGradient(gx,gy,3,gx,gy,60);grd.addColorStop(0,'rgba(255,227,140,'+(.15+bright*.75)+')');grd.addColorStop(1,'rgba(255,227,140,0)');ctx.fillStyle=grd;ctx.beginPath();ctx.arc(gx,gy,60,0,Math.PI*2);ctx.fill();ctx.restore();
+      // 物理自洽结构：线圈 L 与「灯泡+R」并联在上下两节点间；电源+开关在左侧充电支路。
+      // 闭合→电源经开关给线圈通电；断开→电源支路断路，但线圈与灯泡+R 仍构成闭合放电回路。
+      var xMid=470,xL=150,xR=850,yT=110,yB=330;
+      var colCharge=s.on?C.ink2:'#c9d2dc';   // 充电支路（断开时淡出）
+      var colDis=s.on?'#cbd5e1':C.mintD;      // 放电支路（断开时高亮）
+      // 上、下公共节点
+      ctx.save();ctx.strokeStyle=C.ink2;ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(xL,yT);ctx.lineTo(xR,yT);ctx.moveTo(xL,yB);ctx.lineTo(xR,yB);ctx.stroke();ctx.restore();
+      // 左侧充电支路：电源 + 开关
+      ctx.save();ctx.strokeStyle=colCharge;ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(xL,yT);ctx.lineTo(xL,yB);ctx.stroke();ctx.restore();
+      // 电源（左侧支路下部）
+      ctx.save();ctx.strokeStyle=C.pinkD;ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(xL-13,yT+175);ctx.lineTo(xL+13,yT+175);ctx.moveTo(xL-6,yT+197);ctx.lineTo(xL+6,yT+197);ctx.stroke();ctx.restore();
+      label(ctx,'6 V',xL-22,yT+192,C.pinkD,'right');
+      // 开关（左侧支路上部，单刀：闭合接通电源支路）
+      ctx.save();ctx.strokeStyle=s.on?C.mintD:C.pinkD;ctx.lineWidth=4;ctx.beginPath();
+      ctx.moveTo(xL,yT+70);ctx.lineTo(xL+32,yT+70-(s.on?0:26));ctx.stroke();ctx.restore();
+      ctx.save();ctx.fillStyle=s.on?C.mintD:C.pinkD;ctx.beginPath();ctx.arc(xL,yT+70,5,0,Math.PI*2);ctx.arc(xL+32,yT+70,5,0,Math.PI*2);ctx.fill();ctx.restore();
+      label(ctx,s.on?'开关S 闭合':'开关S 断开',xL+50,yT+56,s.on?C.mintD:C.pinkD);
+      // 线圈 L（中间竖直支路，两回路公共元件）
+      ctx.save();ctx.strokeStyle=C.lavD;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xMid,yT);
+      for(var i=0;i<5;i++)ctx.arc(xMid,yT+45+i*24,13,Math.PI,0,false);
+      ctx.lineTo(xMid,yB);ctx.stroke();ctx.restore();
+      label(ctx,'线圈 L = '+nf(s.L)+' H',xMid,yT-16,C.lavD,'center');
+      // 右侧放电支路：灯泡 + 电阻 R（与线圈构成闭合回路，开关断开仍导通）
+      ctx.save();ctx.strokeStyle=colDis;ctx.lineWidth=3;ctx.beginPath();
+      ctx.moveTo(xR,yT);ctx.lineTo(xR,yB);ctx.stroke();ctx.restore();
+      var bright=Math.min(1,st.I/(6/s.R)),gx=xR,gy=(yT+yB)/2;
+      ctx.save();var grd=ctx.createRadialGradient(gx,gy,3,gx,gy,60);grd.addColorStop(0,'rgba(255,227,140,'+(.12+bright*.78)+')');grd.addColorStop(1,'rgba(255,227,140,0)');ctx.fillStyle=grd;ctx.beginPath();ctx.arc(gx,gy,60,0,Math.PI*2);ctx.fill();ctx.restore();
       ctx.save();ctx.fillStyle=bright>.05?'#FFF3BF':'#fff';ctx.strokeStyle=C.ink2;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(gx,gy,20,0,Math.PI*2);ctx.fill();ctx.stroke();
       ctx.beginPath();ctx.moveTo(gx-11,gy+11);ctx.lineTo(gx+11,gy-11);ctx.moveTo(gx-11,gy-11);ctx.lineTo(gx+11,gy+11);ctx.stroke();ctx.restore();
-      label(ctx,'灯泡',gx+36,gy+5,C.ink2);
-      // 电阻（底部）
-      ctx.save();ctx.strokeStyle=C.peachD;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xL+320,yB);
-      for(var k=0;k<7;k++)ctx.lineTo(xL+330+k*18,yB+(k%2?12:-12));
-      ctx.lineTo(xL+470,yB);ctx.stroke();ctx.restore();label(ctx,'R = '+nf(s.R)+' Ω',xL+400,yB+34,C.peachD,'center');
-      // 电流流动点
+      label(ctx,'灯泡',gx+30,gy+5,C.ink2);
+      // 电阻 R（下边右侧）
+      ctx.save();ctx.strokeStyle=colDis;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(xMid+150,yB);
+      for(var k=0;k<7;k++)ctx.lineTo(xMid+160+k*18,yB+(k%2?12:-12));
+      ctx.lineTo(xMid+290,yB);ctx.stroke();ctx.restore();
+      label(ctx,'R = '+nf(s.R)+' Ω',xMid+225,yB+34,C.peachD,'center');
+      // 电流流动点：闭合沿充电回路，断开沿线圈-灯泡-电阻放电回路
       if(st.I>.002){
-        var n=16,spd=Math.min(.5,st.I*.08);
-        for(var p=0;p<n;p++){
-          var f=((p/n+s.t*spd)%1),px,py;
-          if(f<.33){px=xL+(xR-xL)*f/.33;py=yT;}
-          else if(f<.66){px=xR;py=yT+(yB-yT)*(f-.33)/.33;}
-          else{px=xR-(xR-xL)*(f-.66)/.34;py=yB;}
+        var n=18,spd=Math.min(.5,st.I*.08),pts=[];
+        if(s.on){ // 充电回路：电源→上节点→线圈(下)→下节点→电源
+          pts=[[xL,yT],[xMid,yT],[xMid,yB],[xL,yB],[xL,yT]];
+        }else{ // 放电回路：线圈上端→下节点→R→灯泡→上节点→线圈上端
+          pts=[[xMid,yT],[xMid,yB],[xMid+290,yB],[xR,yB],[xR,yT],[xMid,yT]];
+        }
+        var segs=[],tot=0;
+        for(var q0=0;q0<pts.length-1;q0++){var d0=Math.hypot(pts[q0+1][0]-pts[q0][0],pts[q0+1][1]-pts[q0][1]);segs.push(d0);tot+=d0;}
+        for(var p0=0;p0<n;p0++){
+          var f=((p0/n+s.t*spd)%1)*tot,acc=0,px=pts[0][0],py=pts[0][1];
+          for(var q1=0;q1<segs.length;q1++){if(f<=acc+segs[q1]){var u=(f-acc)/segs[q1];px=pts[q1][0]+(pts[q1+1][0]-pts[q1][0])*u;py=pts[q1][1]+(pts[q1+1][1]-pts[q1][1])*u;break;}acc+=segs[q1];}
           ctx.save();ctx.fillStyle=C.skyD;ctx.beginPath();ctx.arc(px,py,3.5,0,Math.PI*2);ctx.fill();ctx.restore();
         }
-        arrow(ctx,xL+180,yT,xL+230,yT,C.skyD);label(ctx,'I='+nf(st.I)+' A',xL+180,yT-12,C.skyD);
+        label(ctx,'I='+nf(st.I)+' A',xMid-60,yT-16,C.skyD,'center');
       }
-      // 副线圈（互感）
+      // 副线圈（互感，画在线圈旁）
       ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.5;ctx.beginPath();
-      for(var m=0;m<5;m++)ctx.arc(xL+330+m*22,yT+95,12,Math.PI,0,false);
+      for(var m=0;m<5;m++)ctx.arc(xMid+52,yT+45+m*24,11,Math.PI/2,Math.PI*1.5,false);
       ctx.stroke();ctx.restore();
-      label(ctx,'副线圈（互感）',xL+380,yT+128,C.mintD,'center');
+      label(ctx,'副线圈（互感）',xMid+110,yT+170,C.mintD);
       if(Math.abs(st.dI)>.002){
         var dir=st.dI>0?-1:1;
-        arrow(ctx,xL+380,yT+95,xL+380+dir*70,yT+95,C.mintD);
-        label(ctx,'ε₂ ∝ −ΔI₁/Δt',xL+390,yT+80,C.mintD);
+        arrow(ctx,xMid+110,yT+150,xMid+110+dir*60,yT+150,C.mintD);
+        label(ctx,'ε₂ ∝ −ΔI₁/Δt',xMid+120,yT+135,C.mintD);
       }
-      label(ctx,s.on?'通电暂态：电流逐渐增大':'断电暂态：电流逐渐减小',24,H-12,s.on?C.lavD:C.pinkD);
+      label(ctx,s.on?'闭合：电源给线圈通电，电流逐渐增大':'断开：电源支路断路，线圈与灯泡构成闭合放电回路，电流逐渐减小',24,H-12,s.on?C.lavD:C.mintD);
+    }
+    function curvePath(ctx,on,Tau,I0,X,Y){
+      ctx.beginPath();
+      for(var i=0;i<=140;i++){var t=T_AXIS*i/140,v=on?I0*(1-Math.exp(-t/Tau)):I0*Math.exp(-t/Tau);if(i===0)ctx.moveTo(X(t),Y(v));else ctx.lineTo(X(t),Y(v));}
     }
     function drawChart(st){
       var ctx=chartV.ctx,W=chartV.w,H=chartV.h;ctx.clearRect(0,0,W,H);
-      var L=46,R=W-18,T=18,B=H-32,TT=Math.max(6*st.tau,.5);
-      function X(t){return L+(R-L)*t/TT;}function Y(v){return B-(B-T)*v/(st.I0*1.15);}
-      ctx.save();ctx.strokeStyle='#e8edf2';ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,B);ctx.lineTo(R,B);ctx.stroke();ctx.restore();
-      label(ctx,'I / A',L-4,T+2,C.ink3,'right');label(ctx,'t / s',R,H-6,C.ink2,'right');
-      ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.6;ctx.beginPath();
-      for(var i=0;i<=140;i++){var t=TT*i/140,v=s.on?st.I0*(1-Math.exp(-t/st.tau)):st.I0*Math.exp(-t/st.tau);if(i===0)ctx.moveTo(X(t),Y(v));else ctx.lineTo(X(t),Y(v));}
-      ctx.stroke();ctx.restore();
+      var L=52,R=W-18,T=18,B=H-34;
+      function X(t){return L+Math.min(1,t/T_AXIS)*(R-L);}
+      function Y(v){return B-Math.min(1,v/I_AXIS)*(B-T);}
+      ctx.save();ctx.strokeStyle='#e8edf2';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,B);ctx.lineTo(R,B);ctx.stroke();
+      // 纵轴刻度 I/A
+      [0,1.5,3,4.5,6].forEach(function(v){var y=Y(v);ctx.beginPath();ctx.moveTo(L-4,y);ctx.lineTo(L,y);ctx.stroke();label(ctx,v.toFixed(1),L-6,y,C.ink3,'right');});
+      // 横轴刻度 t/s
+      for(var t=0;t<=30;t+=5){var xx=X(t);ctx.beginPath();ctx.moveTo(xx,B);ctx.lineTo(xx,B+4);ctx.stroke();label(ctx,String(t),xx,B+15,C.ink3,'center');}
+      ctx.restore();
+      // 变化前基准曲线（默认 L、R 与当前开/关状态）
+      var dTau=DEFAULTS.L/DEFAULTS.R,dI0=6/DEFAULTS.R;
+      ctx.save();ctx.strokeStyle='rgba(139,149,163,.6)';ctx.lineWidth=1.6;ctx.setLineDash([5,4]);
+      curvePath(ctx,s.on,dTau,dI0,X,Y);ctx.stroke();ctx.restore();
+      // 当前曲线
+      ctx.save();ctx.strokeStyle=C.mintD;ctx.lineWidth=2.6;curvePath(ctx,s.on,st.tau,st.I0,X,Y);ctx.stroke();ctx.restore();
+      // τ 竖线（随 L/R 真实移动）
       ctx.save();ctx.strokeStyle=C.pinkD;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(X(st.tau),T);ctx.lineTo(X(st.tau),B);ctx.stroke();ctx.restore();
       label(ctx,'τ='+nf(st.tau)+' s',X(st.tau)+5,T+12,C.pinkD);
-      ctx.save();ctx.fillStyle=C.pinkD;ctx.beginPath();ctx.arc(X(Math.min(TT,s.t)),Y(st.I),6,0,Math.PI*2);ctx.fill();ctx.restore();
+      ctx.save();ctx.fillStyle=C.pinkD;ctx.beginPath();ctx.arc(X(Math.min(T_AXIS,s.t)),Y(st.I),6,0,Math.PI*2);ctx.fill();ctx.restore();
+      label(ctx,'I / A',L-4,T+2,C.ink3,'right');label(ctx,'t / s',R,H-6,C.ink2,'right');
+      label(ctx,'— 当前　┄ 变化前',L+6,T+10,C.mintD);
     }
     function frame(ts){if(dead)return;if(!last)last=ts;var dt=Math.min(.05,(ts-last)/1000);last=ts;
       if(s.playing){s.t+=dt;s.heat+=state(s,s.t).I*state(s,s.t).I*s.R*dt;}
       var st=state(s,s.t);draw(st);
       var set=function(k,v){var e=q('[data-r="'+k+'"]');if(e)e.textContent=v;};
       set('I',nf(st.I));set('tau',nf(st.tau)+' s');set('emf',nf(st.emf)+' V');set('W',nf(st.W)+' J');
-      if(idx===1){set('tau',nf(st.tau)+' s');set('i0',nf(st.I0)+' A');set('five',nf(st.I0*Math.exp(-5))+' A');drawChart(st);}
+      if(idx===1){set('tau',nf(st.tau)+' s');set('i0',nf(st.I0)+' A');
+        // 通电上升：I=I0(1−e⁻⁵)≈0.993I0；断电衰减：I=I0e⁻⁵≈0.0067I0
+        var five=s.on?st.I0*(1-Math.exp(-5)):st.I0*Math.exp(-5);
+        set('five',nf(five)+' A');drawChart(st);}
       if(idx===2){set('wmax',nf(.5*s.L*st.I0*st.I0)+' J');var mx=Math.max(st.W,s.heat,.5*s.L*st.I0*st.I0,1e-6);
         var f1=q('[data-bar="mag"]'),f2=q('[data-bar="heat"]'),t1=q('[data-barv="mag"]'),t2=q('[data-barv="heat"]');
         if(f1)f1.style.width=(st.W/mx*100).toFixed(1)+'%';if(f2)f2.style.width=(s.heat/mx*100).toFixed(1)+'%';if(t1)t1.textContent=nf(st.W)+' J';if(t2)t2.textContent=nf(s.heat)+' J';}
