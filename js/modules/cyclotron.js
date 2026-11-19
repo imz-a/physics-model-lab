@@ -3,7 +3,7 @@
  * 契约：IIFE + window.ModelLab.modules['cyclotron']，零依赖，file:// 可用。
  * 物理：T = 2πm/(qB)（与 v、r 无关）；交变电场周期须等于回旋周期；
  *   v_max = qBR/m，Ek_max = q²B²R²/(2m)，与加速电压 U 无关。
- * 常量 u=1.66×10⁻²⁷kg，e=1.6×10⁻¹⁹C。
+ * 常量 u=1.67×10⁻²⁷kg（取质子质量≈1 u），e=1.6×10⁻¹⁹C。
  * 4 个子标签：0 基本模型 / 1 加速原理 / 2 周期匹配 / 3 高考题型
  * ============================================================ */
 (function (global) {
@@ -76,7 +76,8 @@
   }
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
   function fmt(v, n) { return Number(v).toFixed(n === undefined ? 2 : n); }
-  var U_ATOMIC = 1.66e-27, E_CHARGE = 1.6e-19;
+  // 取质子质量≈1 u = 1.67×10⁻²⁷ kg（与题干口径统一）；α 粒子 m=4u、q=2e
+  var U_ATOMIC = 1.67e-27, E_CHARGE = 1.6e-19;
   function particleOf(type) {
     return type === 'p' ? { name: '质子', m: U_ATOMIC, q: E_CHARGE } : { name: 'α粒子', m: 4 * U_ATOMIC, q: 2 * E_CHARGE };
   }
@@ -158,11 +159,17 @@
     }
   };
 
-  // 画 D 形盒与螺旋轨道
+  // 画 D 形盒与螺旋轨道（全部读取 st：R 定盒大小、U 定圈数、B 定点叉密度、粒子定 Ekm）
   function drawCyclotron(lay, st, t, opts) {
     var c = lay.c, w = lay.w, h = lay.h;
     c.clearRect(0, 0, w, h);
-    var cx = w / 2, cy = h / 2, Rpx = Math.min(w * 0.34, h * 0.44);
+    var cx = w / 2, cy = h / 2, RpxMax = Math.min(w * 0.34, h * 0.44);
+    // D 形盒半径随 st.R 单调缩放且全程不饱和：R=0.2m→40%，R=0.5m→62.5%，R=1m→满刻度
+    function rpxOf(R) { return RpxMax * (0.4 + 0.6 * (R - 0.2) / 0.8); }
+    var Rpx = rpxOf(st.R);
+    var RpxBase = rpxOf(0.5); // 变化前基准 R=0.5m
+    c.beginPath(); c.arc(cx, cy, RpxBase, 0, Math.PI * 2);
+    c.strokeStyle = 'rgba(139,149,163,.5)'; c.lineWidth = 1.4; c.setLineDash([5, 4]); c.stroke(); c.setLineDash([]);
     // 两个 D 形盒
     c.fillStyle = '#f7f4fc'; c.strokeStyle = '#cdbfe2'; c.lineWidth = 2;
     c.beginPath(); c.arc(cx, cy, Rpx, -Math.PI / 2, Math.PI / 2); c.closePath(); c.fill(); c.stroke();
@@ -172,22 +179,25 @@
     c.fillStyle = '#8b95a3'; c.font = '12px sans-serif';
     c.fillText('D₁', cx - Rpx * 0.6, cy - 12); c.fillText('D₂', cx + Rpx * 0.45, cy - 12);
     c.fillText('交变电场缝隙', cx + 10, cy + Rpx + 16);
-    // 磁场符号
+    // 磁场符号 ⊗ 向里；点叉间距随 B 变化（B 越大越密）
+    var step = clamp(56 - st.B * 16, 22, 54);
     c.strokeStyle = '#d8cbe8';
-    for (var mx = cx - Rpx + 22; mx < cx + Rpx; mx += 36) {
-      for (var my = cy - Rpx + 24; my < cy + Rpx; my += 36) {
+    for (var mx = cx - Rpx + step * 0.6; mx < cx + Rpx; mx += step) {
+      for (var my = cy - Rpx + step * 0.6; my < cy + Rpx; my += step) {
         if (Math.hypot(mx - cx, my - cy) > Rpx - 14) continue;
         c.beginPath(); c.arc(mx, my, 4, 0, Math.PI * 2); c.stroke();
         c.beginPath(); c.moveTo(mx - 2.5, my - 2.5); c.lineTo(mx + 2.5, my + 2.5); c.moveTo(mx + 2.5, my - 2.5); c.lineTo(mx - 2.5, my + 2.5); c.stroke();
       }
     }
-    c.fillStyle = '#8b6fb5'; c.font = '12px sans-serif'; c.fillText('B ⊗', 14, 20);
-    // 螺旋轨道：半径 ∝ √n
-    var N = 9, pts = [];
+    c.fillStyle = '#8b6fb5'; c.font = '12px sans-serif'; c.fillText('B ⊗ 向里', 14, 20);
+    c.fillStyle = '#7c63a8'; c.font = '11px sans-serif'; c.fillText('点叉密度随 B 增大｜当前 B=' + fmt(st.B, 2) + 'T', 14, 36);
+    // 螺旋轨道：半径 ∝ √n；圈数 N 随加速电压 U 变（U 越大所需次数越少）
+    var N = clamp(Math.round(14 - st.U * 0.2), 4, 14), pts = [];
     for (var n = 1; n <= N; n++) {
       var rr = Rpx * 0.10 + Rpx * 0.86 * Math.sqrt(n / N);
+      // B⊗(向里)+正电荷 ⇒ 洛伦兹力使粒子逆时针运动；canvas 的 y 轴向下，逆时针对应角度递减
       var start = (n % 2 === 1) ? -Math.PI / 2 : Math.PI / 2;
-      var end = (n % 2 === 1) ? Math.PI / 2 : Math.PI * 1.5;
+      var end = (n % 2 === 1) ? -Math.PI * 1.5 : -Math.PI / 2;
       for (var a = 0; a <= 24; a++) {
         var ang = start + (end - start) * a / 24;
         pts.push({ x: cx + rr * Math.cos(ang), y: cy + rr * Math.sin(ang), n: n });
@@ -197,22 +207,23 @@
     c.moveTo(pts[0].x, pts[0].y);
     for (var i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
     c.stroke();
-    // 缝隙处加速闪光
-    if (opts && opts.animate) {
-      var flash = (t * 0.0012) % 1;
-      c.fillStyle = 'rgba(240,192,138,' + (0.35 + 0.35 * Math.abs(Math.sin(t * 0.006))) + ')';
-      c.fillRect(cx - 7, cy - 9, 14, 18);
+    // 运动粒子 + 缝隙加速闪光：闪光跟随粒子穿缝位置，强度与尺寸随 U 变化
+    var ph = (opts && opts.animate) ? (t * 0.00022) % 1 : 0.7;
+    var p = pts[Math.floor(ph * (pts.length - 1))];
+    if (opts && opts.animate && Math.abs(p.x - cx) < Rpx * 0.12) {
+      var inten = clamp(0.25 + st.U / 50 * 0.6, 0.25, 0.9);
+      var size = 6 + st.U / 50 * 10;
+      c.fillStyle = 'rgba(240,192,138,' + (inten * (0.7 + 0.3 * Math.abs(Math.sin(t * 0.006)))) + ')';
+      c.beginPath(); c.arc(p.x, p.y, size, 0, Math.PI * 2); c.fill();
     }
-    // 运动粒子
-    if (opts && opts.animate) {
-      var ph = (t * 0.00022) % 1;
-      var idx = Math.floor(ph * (pts.length - 1));
-      var p = pts[idx];
-      c.beginPath(); c.arc(p.x, p.y, 5.5, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
-      c.strokeStyle = '#8b6fb5'; c.lineWidth = 2.5; c.stroke();
-    }
+    c.beginPath(); c.arc(p.x, p.y, 5.5, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
+    c.strokeStyle = '#8b6fb5'; c.lineWidth = 2.5; c.stroke();
+    // 图例与实时读数直接标在图上
     c.fillStyle = '#7c63a8'; c.font = 'bold 12px sans-serif';
-    c.fillText(particleOf(st.ptype).name + ' · R=' + fmt(st.R, 2) + 'm', 14, h - 12);
+    c.fillText(particleOf(st.ptype).name + ' · R=' + fmt(st.R, 2) + 'm', 14, h - 42);
+    c.fillText('Ek_max = ' + fmt(ekmax(st) / 1.6e-13, 2) + ' MeV', 14, h - 26);
+    c.font = '11px sans-serif'; c.fillStyle = '#939eab';
+    c.fillText('┄ 灰虚线 = R 变化前(0.5m)参考', 14, h - 10);
   }
 
   /* ---------------- 0 基本模型 ---------------- */
@@ -229,13 +240,13 @@
           ctrlHtml('U', '加速电压 U', 2, 50, 1, 10, 'kV') +
           particleBtns(st) +
         '</div>' +
-        '<section class="cy-card cy-card--wide"><h4>回旋加速器螺旋加速</h4><div class="cy-card__hint">紫色螺旋为粒子轨道；缝隙处的暖色闪烁表示每次加速</div>' +
+        '<section class="cy-card cy-card--wide"><h4>回旋加速器螺旋加速</h4><div class="cy-card__hint">B⊗ 向里 + 正电荷 ⇒ 逆时针螺旋；暖色闪光=每次穿缝加速（强度随 U）；盒径随 R、圈数随 U、点叉密度随 B；灰虚线=R 变化前基准；图上直接标注 Ek_max</div>' +
           '<canvas id="cyScene" class="cy-cv" style="height:360px" aria-label="回旋加速器动画"></canvas></section>' +
         '<div class="cy-readouts">' +
           roHtml('T', '回旋周期 T', '—') + roHtml('f', '交变频率 f', '—') +
           roHtml('vmax', '最大速度', '—') + roHtml('ek', '最大动能', '—') +
         '</div>' +
-        '<div class="cy-note"><b>注意：</b>增大加速电压 U 只会减少加速次数、缩短加速时间，<b>不能</b>提高最大动能；最大动能由 B 和 R 决定（粒子种类固定时）。</div>' +
+        '<div class="cy-note"><b>注意：</b>增大加速电压 U 只会减少加速次数、缩短加速时间，<b>不能</b>提高最大动能；最大动能由 B 和 R 决定（粒子种类固定时）。<b>能量上限的根本原因：</b>速度接近光速时相对论效应使质量 m 增大，回旋周期 T=2πm/(qB) 变长，与固定频率的交变电场失去同步，无法继续加速（需改用同步回旋加速器 / 同步加速器）。</div>' +
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var lay = fit($('#cyScene'), 360);
@@ -265,29 +276,37 @@
           particleBtns(st) +
         '</div>' +
         '<div class="cy-grid">' +
-          '<section class="cy-card"><h4>轨道与能量阶梯</h4><div class="cy-card__hint">柱高表示每次加速后的动能（逐级增加 √n 的半径）</div>' +
+          '<section class="cy-card"><h4>轨道与能量阶梯</h4><div class="cy-card__hint">柱高表示第 i 次加速后的动能 Ek=i·qU（动能 ∝ n，轨道半径 ∝ √n）；柱数、柱高随 U、B、粒子实时变化</div>' +
             '<canvas id="cyPrin" class="cy-cv" style="height:280px" aria-label="加速原理轨道"></canvas>' +
             '<div class="cy-ladder" data-ladder style="margin-top:12px"></div>' +
           '</section>' +
           '<section class="cy-card"><h4>两种场的分工</h4><div class="cy-card__hint">电场加速、磁场偏转，各司其职</div>' +
             '<div class="cy-note" style="margin-top:0"><b>缝隙中的电场：</b>方向周期性反转，保证粒子每次穿过都被加速；每次做功 W = qU。<br><br>' +
             '<b>D 盒内的磁场：</b>洛伦兹力始终垂直于速度，只改变运动方向，不改变速率、不做功。<br><br>' +
-            '<b>结果：</b>加速 n 次后 Ek = nqU，直到半径达到 D 盒边缘 R。</div>' +
+            '<b>结果：</b>加速 n 次后 Ek = nqU（动能 ∝ n），轨道半径 r = mv/(qB) = √(2mEk)/(qB) ∝ √n，直到半径达到 D 盒边缘 R。</div>' +
             '<div class="cy-formula" style="margin-top:16px">n ≈ Ek_max/(qU) = <span data-n>—</span> 次</div>' +
           '</section>' +
         '</div>' +
-        '<div class="cy-note"><b>结论：</b>U 越大，达到最大动能所需的加速次数 n 越少（加速更快），但最大动能 Ek_max 不变。</div>' +
+        '<div class="cy-note"><b>结论：</b>U 越大，达到最大动能所需的加速次数 n 越少（加速更快），但最大动能 Ek_max 不变。速度接近光速时相对论效应使质量 m 增大、回旋周期变长，与固定频率失同步，这才是能量上限的根本原因。</div>' +
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var lay = fit($('#cyPrin'), 280);
+    var EK_REF = 12e6 * 1.6e-19;              // 固定参考量程 12MeV（默认质子 B=1T、R=0.5m 的 Ek_max）
     function update() {
       var p = particleOf(st.ptype);
-      var n = ekmax(st) / (p.q * st.U * 1000);
+      var qU = p.q * st.U * 1000;              // 每次过缝动能增量 (J)
+      var EkMax = ekmax(st);                   // 最大动能 (J)
+      var n = EkMax / qU;                      // 达到最大动能所需加速次数
       $('[data-n]').textContent = fmt(n, 0);
-      var lad = $('[data-ladder]');
+      // 柱数随 U（U 越大次数越少）；第 i 柱 Ek_i=EkMax·i/M=(n·qU)·i/M，动能 ∝ n
+      var M = clamp(Math.round(420 / st.U), 4, 12);
       var html = '';
-      for (var i = 1; i <= 10; i++) html += '<i style="height:' + Math.round(10 + 82 * i / 10) + '%"></i>';
-      lad.innerHTML = html;
+      for (var i = 1; i <= M; i++) {
+        var Ek_i = EkMax * i / M;
+        var hh = clamp(6 + 92 * Ek_i / EK_REF, 6, 98); // 固定量程，B/R/粒子变大则柱更高（不随参数归一）
+        html += '<i style="height:' + hh.toFixed(0) + '%" title="第' + Math.round(i * n / M) + '次加速 · Ek≈' + fmt(Ek_i / 1.6e-13, 2) + ' MeV"></i>';
+      }
+      $('[data-ladder]').innerHTML = html;
     }
     bindCtrls(ctx, st, ['U', 'B'], update);
     bindParticle(ctx, st, update);
@@ -306,7 +325,7 @@
         '<div class="cy-bar">' +
           ctrlHtml('B', '磁感应强度 B', 0.2, 2, 0.05, 1.0, 'T') +
           '<div class="cy-ctrl"><div class="cy-ctrl__top"><label>交变电场频率 f</label><span class="cy-ctrl__val" data-val="f">—</span></div>' +
-            '<input class="cy-range" type="range" data-key="f" min="2" max="30" step="0.1" value="15" aria-label="交变频率"></div>' +
+            '<input class="cy-range" type="range" data-key="f" min="1" max="32" step="0.1" value="15" aria-label="交变频率"></div>' +
           '<div class="cy-btnrow"><button type="button" class="cy-btn is-active" data-act="auto">自动匹配</button>' +
           '<button type="button" class="cy-btn" data-act="manual">手动调节</button></div>' +
           particleBtns(st) +
@@ -321,14 +340,14 @@
             '<div class="cy-status" data-status style="margin-top:16px"></div>' +
           '</section>' +
         '</div>' +
-        '<div class="cy-note"><b>为什么 T 与 v 无关：</b>r ∝ v，而周长 2πr 也 ∝ v，两者之比 T = 2πr/v = 2πm/(qB) 与 v 约去。因此粒子每转半圈用时恒为 T/2，交变电场只要以固定周期反转即可。</div>' +
+        '<div class="cy-note"><b>为什么 T 与 v 无关：</b>r ∝ v，而周长 2πr 也 ∝ v，两者之比 T = 2πr/v = 2πm/(qB) 与 v 约去。因此粒子每转半圈用时恒为 T/2，交变电场只要以固定周期反转即可。<b>但这一结论只在非相对论范围成立：</b>速度接近光速时 m 增大、T 变长，与固定频率失同步，故存在能量上限（需同步回旋加速器 / 同步加速器）。</div>' +
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
     var lay = fit($('#cyTV'), 290);
     var auto = true;
     function update() {
       var f0 = freq(st) / 1e6;
-      if (auto) { st.f = f0; ctx.container.querySelector('[data-key="f"]').value = clamp(f0, 2, 30); }
+      if (auto) { st.f = f0; ctx.container.querySelector('[data-key="f"]').value = clamp(f0, 1, 32); }
       $('[data-val="f"]').innerHTML = fmt(st.f, 2) + '<em>MHz</em>';
       $('[data-f0]').textContent = fmt(f0, 2);
       $('[data-fset]').textContent = fmt(st.f, 2);
@@ -339,8 +358,13 @@
       s.textContent = ok ? '✓ 频率匹配：每次到达缝隙都被加速，粒子正常螺旋前进。'
         : '✕ 频率失配：粒子到达缝隙时电场方向不对，无法持续加速（会被减速或卡住）。';
     }
-    bindCtrls(ctx, st, ['B'], function () { if (auto) update(); else update(); });
-    on(ctx.container.querySelector('[data-key="f"]'), 'input', function () { auto = false; st.f = parseFloat(this.value); update(); });
+    bindCtrls(ctx, st, ['B'], function () { update(); });
+    on(ctx.container.querySelector('[data-key="f"]'), 'input', function () {
+      auto = false; st.f = parseFloat(this.value);
+      $('[data-act="auto"]').classList.remove('is-active'); // 手动拖动后取消"自动匹配"高亮
+      $('[data-act="manual"]').classList.add('is-active');
+      update();
+    });
     on($('[data-act="auto"]'), 'click', function () {
       auto = true; this.classList.add('is-active'); $('[data-act="manual"]').classList.remove('is-active'); update();
     });
@@ -378,9 +402,31 @@
   function viewExam(ctx) {
     var on = ctx.on;
     var st = { B: 1.0, R: 0.5, U: 10, ptype: 'p' };
+    var exp1 = { right: 'B', text: '最大动能 Ek_max = q²B²R²/(2m)，只由 B、R 和粒子决定，与加速电压 U 无关。增大 U 只会减少加速次数、缩短达到最大动能的时间。' };
+    // 题2：B 与粒子可调 ⇒ 题干、频率、选项、正确答案、解析全部动态生成
+    function buildQ2(s) {
+      var p = particleOf(s.ptype);
+      var f0 = freq(s) / 1e6;
+      var right = Math.max(1, Math.round(f0));
+      var vals = [];
+      function add(x) {
+        x = Math.max(1, Math.round(x));
+        if (x !== right && vals.indexOf(x) < 0) vals.push(x);
+      }
+      add(right / 2); add(right * 2); add(right * 0.6); add(right + 4); add(Math.max(1, right - 3));
+      while (vals.length < 3) add(right + vals.length + 2);
+      return {
+        prompt: '2．（计算）' + p.name + '（m=' + fmt(p.m / 1e-27, 2) + '×10⁻²⁷kg，q=' + fmt(p.q / 1e-19, 1) +
+          '×10⁻¹⁹C，取质子质量≈1 u）在 B=' + fmt(s.B, 2) + ' T 的磁场中回旋，交变电场频率应调为多少？（f 与 D 形盒半径 R 无关）',
+        opts: ['A．约 ' + right + ' MHz', 'B．约 ' + vals[0] + ' MHz', 'C．约 ' + vals[1] + ' MHz', 'D．约 ' + vals[2] + ' MHz'],
+        right: 'A', f0: f0,
+        text: 'f = qB/(2πm) = ' + fmt(p.q / 1e-19, 1) + '×10⁻¹⁹×' + fmt(s.B, 2) + ' / (2π×' + fmt(p.m / 1e-27, 2) +
+          '×10⁻²⁷) ≈ ' + fmt(f0 / 10, 2) + '×10⁷ Hz ≈ ' + right + ' MHz，选 A。f 与 B 成正比、与比荷 q/m 成正比，与 D 形盒半径 R 无关；拖动 B 或切换粒子可见频率随之改变。'
+      };
+    }
     ctx.container.innerHTML =
       '<div class="cy-wrap">' +
-        '<div class="cy-lead"><p>点击选项即时判定并查看解析。第 1 题考查加速电压与最大动能的关系；第 2 题可调 B、R、粒子实时算交变频率。</p></div>' +
+        '<div class="cy-lead"><p>点击选项即时判定并查看解析。第 1 题考查加速电压与最大动能的关系（参数固定）；第 2 题 B 与粒子可调，<b>题干、频率、四个选项与正确答案均随参数实时重算</b>。</p></div>' +
         '<div class="cy-q">' +
           '<div class="cy-q__t">1．（概念）质子在回旋加速器中，若只把加速电压 U 增大为原来的 2 倍，最大动能将如何变化？</div>' +
           '<div class="cy-opts" data-q="1">' +
@@ -391,46 +437,48 @@
           '</div><div class="cy-explain" data-exp="1" hidden></div>' +
         '</div>' +
         '<div class="cy-q">' +
-          '<div class="cy-q__t">2．（计算）质子（m=1.67×10⁻²⁷kg，q=1.6×10⁻¹⁹C）在 B=1 T 的磁场中回旋，交变电场频率应调为多少？</div>' +
+          '<div class="cy-q__t" data-prompt2></div>' +
           '<div class="cy-bar" style="box-shadow:none;border:0;padding:12px 0">' +
             ctrlHtml('B', '磁场 B', 0.2, 2, 0.05, 1.0, 'T') +
-            ctrlHtml('R', 'D形盒半径 R', 0.2, 1, 0.05, 0.5, 'm') +
             particleBtns(st) +
             '<div class="cy-formula" style="font-size:15px">f = qB/(2πm) = <span data-f>—</span> MHz</div>' +
           '</div>' +
-          '<div class="cy-opts" data-q="2">' +
-            '<button type="button" class="cy-opt" data-ans="A">A．约 15 MHz</button>' +
-            '<button type="button" class="cy-opt" data-ans="B">B．约 30 MHz</button>' +
-            '<button type="button" class="cy-opt" data-ans="C">C．约 7.5 MHz</button>' +
-            '<button type="button" class="cy-opt" data-ans="D">D．约 1.6 MHz</button>' +
-          '</div><div class="cy-explain" data-exp="2" hidden></div>' +
+          '<div class="cy-opts" data-q="2" data-opts2></div><div class="cy-explain" data-exp="2" hidden></div>' +
         '</div>' +
       '</div>';
     var $ = function (s) { return ctx.container.querySelector(s); };
-    var exp = {
-      '1': { right: 'B', text: '最大动能 Ek_max = q²B²R²/(2m)，只由 B、R 和粒子决定，与加速电压 U 无关。增大 U 只会减少加速次数、缩短达到最大动能的时间。' },
-      '2': { right: 'A', text: 'f = qB/(2πm) = 1.6×10⁻¹×1 / (2π×1.67×10⁻²⁷) ≈ 1.53×10⁷ Hz ≈ 15 MHz。拖动 B 可见频率与 B 成正比。' }
-    };
-    function update() {
-      $('[data-f]').textContent = fmt(freq(st) / 1e6, 2);
+    function refreshQ2() {
+      var d = buildQ2(st);
+      $('[data-prompt2]').textContent = d.prompt;
+      $('[data-f]').textContent = fmt(d.f0, 2);
       $('[data-val="B"]').innerHTML = fmt(st.B, 2) + '<em>T</em>';
-      $('[data-val="R"]').innerHTML = fmt(st.R, 2) + '<em>m</em>';
+      $('[data-opts2]').innerHTML = d.opts.map(function (o, i) {
+        return '<button type="button" class="cy-opt" data-ans="' + 'ABCD'[i] + '">' + o + '</button>';
+      }).join('');
+      $('[data-exp="2"]').hidden = true; $('[data-exp="2"]').innerHTML = '';
     }
-    bindCtrls(ctx, st, ['B', 'R'], update);
-    bindParticle(ctx, st, update); update();
-    Array.prototype.forEach.call(ctx.container.querySelectorAll('[data-q]'), function (box) {
-      var q = box.getAttribute('data-q');
-      Array.prototype.forEach.call(box.querySelectorAll('.cy-opt'), function (b) {
-        on(b, 'click', function () {
-          var ans = b.getAttribute('data-ans');
-          Array.prototype.forEach.call(box.querySelectorAll('.cy-opt'), function (x) {
-            x.classList.remove('is-right', 'is-wrong');
-            if (x === b) x.classList.add(ans === exp[q].right ? 'is-right' : 'is-wrong');
-          });
-          var e = $('[data-exp="' + q + '"]'); e.hidden = false;
-          e.innerHTML = (ans === exp[q].right ? '✅ 正确！' : '❌ 再想想。') + ' ' + exp[q].text;
+    bindCtrls(ctx, st, ['B'], refreshQ2);
+    bindParticle(ctx, st, refreshQ2);
+    refreshQ2();
+    // 事件委托：选项 innerHTML 重建后判分依然有效；判分与解析取当前参数
+    function answer(box, q) {
+      on(box, 'click', function (e) {
+        var b = e.target;
+        while (b && b !== box && (b.className || '').indexOf('cy-opt') < 0) b = b.parentNode;
+        if (!b || b === box) return;
+        var ans = b.getAttribute('data-ans');
+        var d = q === 2 ? buildQ2(st) : null;
+        var correct = q === 2 ? d.right : exp1.right;
+        var text = q === 2 ? d.text : exp1.text;
+        Array.prototype.forEach.call(box.querySelectorAll('.cy-opt'), function (x) {
+          x.classList.remove('is-right', 'is-wrong');
+          if (x === b) x.classList.add(ans === correct ? 'is-right' : 'is-wrong');
         });
+        var el = $('[data-exp="' + q + '"]'); el.hidden = false;
+        el.innerHTML = (ans === correct ? '✅ 正确！' : '❌ 再想想。') + ' ' + text;
       });
-    });
+    }
+    answer($('[data-q="1"]'), 1);
+    answer($('[data-q="2"]'), 2);
   }
 })(window);
