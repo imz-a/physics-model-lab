@@ -455,8 +455,12 @@
     c.beginPath(); c.moveTo(L, Y(0)); c.lineTo(R, Y(0)); c.moveTo(X(0), Tp); c.lineTo(X(0), B); c.stroke();
     c.fillStyle = '#8b95a3'; c.font = '12px sans-serif';
     c.fillText('I', 12, Tp + 6); c.fillText('U/V', R - 28, B + 22); c.fillText('0', X(0) - 4, B + 16);
-    // 不同光强的曲线（固定 Uc）
-    [0.3, 0.6, 1].forEach(function (inten) {
+    // 不同光强的曲线（固定 Uc）：始终高亮离当前光强最近的一条
+    var levels = [0.3, 0.6, 1], nearest = levels[0];
+    levels.forEach(function (v) { if (Math.abs(v - st.light) < Math.abs(nearest - st.light)) nearest = v; });
+    c.fillStyle = '#8b95a3'; c.font = '11px sans-serif';
+    c.fillText('当前光强 ' + fmt(st.light, 2) + '（高亮最接近曲线）', L + 6, Tp + 10);
+    levels.forEach(function (inten) {
       c.beginPath();
       for (var px = 0; px <= w - L; px += 2) {
         var u = uMin + px / (R - L) * (uMax - uMin);
@@ -464,7 +468,7 @@
         var xx = X(u), yy = Y(ii);
         if (px === 0) c.moveTo(xx, yy); else c.lineTo(xx, yy);
       }
-      var active = Math.abs(inten - st.light) < 0.15;
+      var active = inten === nearest;
       c.strokeStyle = active ? '#9b86c4' : 'rgba(208,196,232,.6)';
       c.lineWidth = active ? 3.5 : 1.8; c.stroke();
     });
@@ -494,7 +498,7 @@
           '</div><div class="pe-explain" data-exp="1" hidden></div>' +
         '</div>' +
         '<div class="pe-q">' +
-          '<div class="pe-q__t">2．（计算）用 ν = 6.0×10¹⁴ Hz 的光照射钠（W₀ = 2.3 eV），遏止电压约为多少？</div>' +
+          '<div class="pe-q__t" data-qt="2">2．（计算）用 ν = 6.0×10¹⁴ Hz 的光照射钠（W₀ = 2.3 eV），遏止电压约为多少？</div>' +
           '<div class="pe-bar" style="box-shadow:none;border:0;padding:12px 0">' +
             ctrlHtml('nu', '频率 ν', 2, 10, 0.1, 6.0, '×10¹⁴Hz') +
             '<div class="pe-ctrl" style="flex:1 1 200px"><div class="pe-ctrl__top"><label>逸出功 W₀</label><span class="pe-ctrl__val" data-val="w">2.3<em>eV</em></span></div>' +
@@ -512,9 +516,32 @@
     var $ = function (s) { return ctx.container.querySelector(s); };
     var exp = {
       '1': { right: 'B', text: '由 Ek = hν − W₀ 可知，最大初动能只由频率 ν 决定，与光强无关。增大光强只会使逸出的光电子数目增多（饱和电流增大）。' },
-      '2': { right: 'A', text: 'hν = 0.414 × 6.0 ≈ 2.48 eV，Ek = 2.48 − 2.3 = 0.18 eV。由 eUc = Ek 得 Uc ≈ 0.18 V。' }
+      '2': { right: 'A', text: '' }
     };
-    function updateUc() { $('[data-uc]').textContent = fmt(ekMax(st.nu, st.w), 2); }
+    function updateUc() {
+      var uc = ekMax(st.nu, st.w), photon = photonEnergy(st.nu);
+      $('[data-uc]').textContent = fmt(uc, 2);
+      // 题干、选项、答案随 ν 与 W₀ 动态生成
+      $('[data-qt="2"]').textContent = '2．（计算）用 ν = ' + fmt(st.nu, 1) + '×10¹⁴ Hz 的光照射逸出功 W₀ = '
+        + fmt(st.w, 1) + ' eV 的金属，遏止电压约为多少？';
+      var cand = [uc], extra = [uc / 2, uc * 2, uc + 0.5, uc + 1, 0, 0.5, 1, 2];
+      function push(v) {
+        if (v < 0 || cand.length >= 4) return;
+        for (var z = 0; z < cand.length; z++) if (Math.abs(cand[z] - v) < 0.01) return;
+        cand.push(v);
+      }
+      for (var i = 0; i < extra.length && cand.length < 4; i++) push(extra[i]);
+      var letters = ['A', 'B', 'C', 'D'];
+      for (var k = 0; k < 4; k++) {
+        $('[data-q="2"] [data-ans="' + letters[k] + '"]').textContent = letters[k] + '．' + fmt(cand[k], 2) + ' V';
+        if (Math.abs(cand[k] - uc) < 0.01) exp['2'].right = letters[k];
+      }
+      exp['2'].text = 'hν = 0.414 × ' + fmt(st.nu, 1) + ' ≈ ' + fmt(photon, 2) + ' eV，Ek = hν − W₀ = '
+        + fmt(photon, 2) + ' − ' + fmt(st.w, 1) + ' = ' + fmt(uc, 2) + ' eV；由 eUc = Ek 得 Uc ≈ '
+        + fmt(uc, 2) + ' V，应选 ' + exp['2'].right + '。（若 hν < W₀ 则不发生光电效应，Uc = 0。）';
+      Array.prototype.forEach.call($('[data-q="2"]').querySelectorAll('.pe-opt'), function (x) { x.classList.remove('is-right', 'is-wrong'); });
+      $('[data-exp="2"]').hidden = true;
+    }
     bindCommon(ctx, st, updateUc); updateUc();
     Array.prototype.forEach.call(ctx.container.querySelectorAll('[data-q]'), function (box) {
       var q = box.getAttribute('data-q');
