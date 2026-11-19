@@ -316,6 +316,7 @@
       + '<div><div class="cap-sym">两个电容 C₁、C₂ <b>并联</b>接在同一电源上，求等效电容 C。可拖动参数改变题目数据（归一化，略去 4πk）。<br>'
       + 'C₁=<b id="capQ2C1V">2.0</b>　C₂=<b id="capQ2C2V">3.0</b></div>'
       + '<div class="cap-chips"><button class="cap-chip" type="button" data-sym="C">C</button><button class="cap-chip" type="button" data-sym="U">U</button><button class="cap-chip" type="button" data-sym="Q">Q</button></div>'
+      + '<div class="cap-fb" id="capQ2SymFb" aria-live="polite">点按 C / U / Q 查看符号含义与单位。</div>'
       + '<div class="cap-ctrls" style="grid-template-columns:repeat(2,minmax(0,1fr))">'
       + '<div class="cap-ctrl"><label>C₁ <b>2.0</b></label><input id="capQ2C1" class="cap-range" type="range" min="1" max="5" step="0.5" value="2"></div>'
       + '<div class="cap-ctrl"><label>C₂ <b>3.0</b></label><input id="capQ2C2" class="cap-range" type="range" min="1" max="5" step="0.5" value="3"></div></div>'
@@ -782,6 +783,22 @@
 
     /* ---------------- 视图 3：高考题型（即时判分） ---------------- */
     if(extIndex === 3){
+      /* 第 2 题 C / U / Q 标记：点击显示含义与单位（与第 0 节行为一致） */
+      var SYM_EXAM = {
+        C: '电容 C：容纳电荷的本领，单位 F（法拉）；并联 C=C₁+C₂，串联 1/C=Σ1/Cᵢ。',
+        U: '电压 U：两极板间电势差，单位 V（伏特）；并联各支路电压相等。',
+        Q: '电荷量 Q：一块极板所带电荷的绝对值，单位 C（库仑）；并联 Q=Q₁+Q₂。'
+      };
+      var examChips = container.querySelectorAll('#capQ2SymFb');
+      var chipBox = examChips[0];
+      var examSymBtns = container.querySelectorAll('.cap-chip');
+      for(var si=0; si<examSymBtns.length; si++){
+        on(examSymBtns[si], 'click', function(){
+          var sym = this.getAttribute('data-sym');
+          for(var sj=0; sj<examSymBtns.length; sj++) examSymBtns[sj].classList.toggle('on', examSymBtns[sj] === this);
+          if(chipBox) chipBox.textContent = sym + '：' + (SYM_EXAM[sym] || '电容器相关物理量。');
+        });
+      }
       function fb(id, ok, msg){
         var el = q(id);
         el.className = 'cap-fb ' + (ok ? 'ok' : 'no');
