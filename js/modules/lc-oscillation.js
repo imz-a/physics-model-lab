@@ -9,6 +9,8 @@
   var doc=global.document;
   var C={ink:'#3a4250',ink2:'#5a6472',ink3:'#8b95a3',pinkD:'#E27886',mintD:'#57A47F',skyD:'#5B9BC4',lavD:'#8A76BB',peachD:'#D69A55'};
   var saved={L:1.0,C:10,playing:true};
+  var DEFAULTS={L:1.0,C:10};                          // 变化前基准
+  var T_MAX_MS=2*Math.PI*Math.sqrt(2*100e-6)*1000;   // 固定纵轴量程：L=2H,C=100µF → ≈88.9ms
   var Q0=10e-6;
   var SID='ml-lc-style';
   var CSS=''
@@ -77,7 +79,7 @@
       Q[2].ans=st(s,0).T*1000;Q[2].unit='ms';Q[2].expl='T = 2π√(LC) = 2π√('+nf(s.L)+'×'+nf(s.C)+'×10⁻⁶) = '+nf(Q[2].ans)+' ms。';
     }
     function paintQuiz(){if(idx!==3)return;quizData();q('[data-qt="1"]').textContent=Q[1].text;q('[data-qt="2"]').textContent=Q[2].text;q('[data-unit]').textContent=Q[2].unit;var b=q('[data-op="1"]');b.innerHTML='';Q[1].opts.forEach(function(t,i){var x=doc.createElement('button');x.type='button';x.textContent=String.fromCharCode(65+i)+'. '+t;x.setAttribute('data-i',i);b.appendChild(x);});}
-    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');}}
+    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');paintQuiz();}}
     function submit(n){n=Number(n);var fb=q('[data-fb="'+n+'"]');if(n===1){if(sel<0){fb.className='lc-fb no';fb.hidden=false;fb.textContent='请先选择。';return;}var ok=sel===Q[1].correct;fb.className='lc-fb '+(ok?'ok':'no');fb.hidden=false;fb.innerHTML=(ok?'✅ 正确！':'❌ 再想想。')+Q[1].expl;}
       else{var val=Number(q('[data-num]').value),ok2=isFinite(val)&&Math.abs(val-Q[2].ans)<=Math.max(.05,Math.abs(Q[2].ans)*.05);fb.className='lc-fb '+(ok2?'ok':'no');fb.hidden=false;fb.innerHTML=(ok2?'✅ 正确！':'❌ 参考答案 '+nf(Q[2].ans)+' ms。')+Q[2].expl;}}
     if(idx===3){paintQuiz();on(LST,q('[data-op="1"]'),'click',function(e){var b=e.target.closest?e.target.closest('button'):null;if(!b)return;sel=Number(b.getAttribute('data-i'));var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.toggle('is-sel',i===sel);});for(var z=0;z<qa('[data-sub]').length;z++){(function(b){on(LST,b,'click',function(){submit(b.getAttribute('data-sub'));});})(qa('[data-sub]')[z]);}}
@@ -114,35 +116,66 @@
       label(ctx,'q = '+nf(S.q*1e6)+' µC',xL,yT-24,C.pinkD,'center');
       label(ctx,'电场能 '+nf(S.Ec*1e3)+' mJ　↔　磁场能 '+nf(S.Em*1e3)+' mJ',W/2,H-12,C.lavD,'center');
     }
-    function curve(view,fn1,fn2,c1,c2,t,S,ttl){
+    // 两条曲线各自归一：q 用其幅值 Q0，i 用其幅值 ωQ0；双纵轴分别标 C 与 mA
+    function curve(view,fn1,fn2,c1,c2,t,S,ttl,title,amp1,amp2,u1,u2){
       var x=view.ctx,w=view.w,h=view.h;x.clearRect(0,0,w,h);
-      var L=46,R=w-18,T=18,B=h-30;
+      var L=54,R=w-18,T=18,B=h-30;
       x.save();x.strokeStyle='#e8edf2';x.beginPath();x.moveTo(L,T);x.lineTo(L,B);x.lineTo(R,B);x.stroke();x.restore();
-      label(x,ttl,L+4,T+10,C.ink3);
-      var mx=Math.max(1e-9,Math.abs(fn1(0)),Math.abs(fn2(ttl/4)))*1.15;
-      function X(v){return L+(R-L)*v/ttl;}function Y(v){return (T+B)/2-(B-T)/2*v/mx;}
-      x.save();x.strokeStyle='#f0f3f7';x.beginPath();x.moveTo(L,Y(0));x.lineTo(R,Y(0));x.stroke();x.restore();
-      [[fn1,c1],[fn2,c2]].forEach(function(p){x.save();x.strokeStyle=p[1];x.lineWidth=2.6;x.beginPath();for(var i=0;i<=140;i++){var tv=ttl*i/140;if(i===0)x.moveTo(X(tv),Y(p[0](tv)));else x.lineTo(X(tv),Y(p[0](tv)));}x.stroke();x.restore();});
+      label(x,title,L+4,T+10,C.ink3);
+      var mx1=Math.max(1e-15,amp1)*1.12,mx2=Math.max(1e-15,amp2)*1.12;
+      function X(v){return L+(R-L)*v/ttl;}
+      function Y1(v){return (T+B)/2-(B-T)/2*v/mx1;}
+      function Y2(v){return (T+B)/2-(B-T)/2*v/mx2;}
+      // 双纵轴刻度：左=fn1 量纲，右=fn2 量纲
+      [1,0.5,0,-0.5,-1].forEach(function(k){
+        var y1=Y1(k*amp1);x.save();x.strokeStyle='#eef2f6';x.beginPath();x.moveTo(L,y1);x.lineTo(R,y1);x.stroke();x.restore();
+        label(x,nf(k*amp1),L-5,y1,C.ink3,'right');
+        label(x,nf(k*amp2),R+2,y1,C.ink3,'left');
+      });
+      [[fn1,Y1,c1],[fn2,Y2,c2]].forEach(function(p){x.save();x.strokeStyle=p[2];x.lineWidth=2.6;x.beginPath();for(var i=0;i<=140;i++){var tv=ttl*i/140;if(i===0)x.moveTo(X(tv),p[1](p[0](tv)));else x.lineTo(X(tv),p[1](p[0](tv)));}x.stroke();x.restore();});
       var tc=Math.min(ttl,t);
       x.save();x.strokeStyle=C.lavD;x.setLineDash([4,4]);x.beginPath();x.moveTo(X(tc),T);x.lineTo(X(tc),B);x.stroke();x.restore();
-      x.save();x.fillStyle=C.pinkD;x.beginPath();x.arc(X(tc),Y(fn1(tc)),5,0,Math.PI*2);x.fill();x.restore();
-      label(x,'t / ms',R,h-6,C.ink2,'right');
+      x.save();x.fillStyle=C.pinkD;x.beginPath();x.arc(X(tc),Y1(fn1(tc)),5,0,Math.PI*2);x.fill();x.restore();
+      label(x,u1,L-5,T+2,C.ink3,'right');label(x,u2,R+2,T+2,C.ink3,'left');label(x,'t / ms',R,h-6,C.ink2,'right');
     }
     function frame(ts){if(dead)return;if(!last)last=ts;var dt=Math.min(.05,(ts-last)/1000);last=ts;
       if(s.playing)s.t+=dt;
       var S=st(s,s.t);drawCircuit(S);
       var set=function(k,v){var e=q('[data-r="'+k+'"]');if(e)e.textContent=v;};
       set('T',nf(S.T*1000));set('f',nf(S.f));set('q',nf(S.q*1e6));set('i',nf(S.i*1000));
-      if(idx===0){curve(waveV,function(t){return Q0*Math.cos(S.w*t);},function(t){return -S.w*Q0*Math.sin(S.w*t);},C.pinkD,C.skyD,s.t%S.T,S,S.T,'q（粉）/ i（蓝）');}
+      if(idx===0){curve(waveV,
+        function(t){return Q0*Math.cos(S.w*t)*1e6;},           // q -> µC
+        function(t){return -S.w*Q0*Math.sin(S.w*t)*1e3;},      // i -> mA
+        C.pinkD,C.skyD,s.t%S.T,S,S.T,'q（粉）/ i（蓝）',Q0*1e6,S.w*Q0*1e3,'q/µC','i/mA');}
       if(idx===1){set('T',nf(S.T*1000)+' ms');set('f',nf(S.f)+' Hz');
-        var cv=chartV.ctx,w=chartV.w,h=chartV.h;cv.clearRect(0,0,w,h);var L=48,R=w-18,T=18,B=h-30;
-        function fn(x){return 2*Math.PI*Math.sqrt(x*s.C*1e-6)*1000;}var maxL=2,mx=fn(maxL)*1.15;
-        cv.save();cv.strokeStyle='#e8edf2';cv.beginPath();cv.moveTo(L,T);cv.lineTo(L,B);cv.lineTo(R,B);cv.stroke();cv.restore();
-        cv.save();cv.strokeStyle=C.mintD;cv.lineWidth=2.6;cv.beginPath();cv.moveTo(L,B);cv.lineTo(R,B-(B-T)*fn(maxL)/mx);cv.stroke();cv.restore();
-        cv.save();cv.fillStyle=C.pinkD;cv.beginPath();cv.arc(L+(R-L)*s.L/maxL,B-(B-T)*fn(s.L)/mx,6,0,Math.PI*2);cv.fill();cv.restore();
-        label(cv,'T / ms',L-4,T+2,C.ink3,'right');label(cv,'L / H',R,h-6,C.ink2,'right');label(cv,'T ∝ √L',L+4,T+10,C.mintD);
+        var cv=chartV.ctx,w=chartV.w,h=chartV.h;cv.clearRect(0,0,w,h);var L=50,R=w-18,T=18,B=h-32;
+        function fn(x,Cf){return 2*Math.PI*Math.sqrt(x*Cf*1e-6)*1000;} // T/ms
+        var maxL=2,AX=T_MAX_MS*1.05;
+        function X(l){return L+(R-L)*l/maxL;}
+        function Y(ms){return B-Math.min(1,ms/AX)*(B-T);}
+        // 坐标轴 + 绝对刻度
+        cv.save();cv.strokeStyle='#e8edf2';cv.lineWidth=1;cv.beginPath();cv.moveTo(L,T);cv.lineTo(L,B);cv.lineTo(R,B);cv.stroke();
+        [0,22.2,44.4,66.7,88.9].forEach(function(v){var y=Y(v);cv.beginPath();cv.moveTo(L-4,y);cv.lineTo(L,y);cv.stroke();label(cv,v.toFixed(0),L-6,y,C.ink3,'right');});
+        for(var l=0;l<=2;l+=0.5){var xx=X(l);cv.beginPath();cv.moveTo(xx,B);cv.lineTo(xx,B+4);cv.stroke();label(cv,l.toFixed(1),xx,B+15,C.ink3,'center');}
+        cv.restore();
+        // 变化前基准曲线（默认 C）
+        cv.save();cv.strokeStyle='rgba(139,149,163,.6)';cv.lineWidth=1.6;cv.setLineDash([5,4]);cv.beginPath();
+        for(var jj=0;jj<=80;jj++){var lv=maxL*jj/80;if(jj===0)cv.moveTo(X(lv),Y(fn(lv,DEFAULTS.C)));else cv.lineTo(X(lv),Y(fn(lv,DEFAULTS.C)));}
+        cv.stroke();cv.restore();
+        // 当前曲线（随 C 整体升降）
+        cv.save();cv.strokeStyle=C.mintD;cv.lineWidth=2.6;cv.beginPath();
+        for(var i=0;i<=80;i++){var lv=maxL*i/80;if(i===0)cv.moveTo(X(lv),Y(fn(lv,s.C)));else cv.lineTo(X(lv),Y(fn(lv,s.C)));}
+        cv.stroke();cv.restore();
+        // 当前工作点
+        cv.save();cv.fillStyle=C.pinkD;cv.beginPath();cv.arc(X(s.L),Y(fn(s.L,s.C)),6,0,Math.PI*2);cv.fill();cv.restore();
+        label(cv,'T / ms',L-4,T+2,C.ink3,'right');label(cv,'L / H',R,h-6,C.ink2,'right');
+        label(cv,'T ∝ √L（纵轴固定量程，拖 C 整条曲线升降）',L+6,T+10,C.mintD);
+        label(cv,'┄ 变化前(C=10µF)',R-4,T+22,C.ink3,'right');
       }
-      if(idx===2){curve(energyV,function(t){var qq=Q0*Math.cos(S.w*t);return qq*qq/(2*S.C);},function(t){var ii=-S.w*Q0*Math.sin(S.w*t);return .5*S.L*ii*ii;},C.pinkD,C.skyD,s.t%(S.T/2),S,S.T/2,'Ec（粉）/ Em（蓝）');
+      if(idx===2){curve(energyV,
+        function(t){var qq=Q0*Math.cos(S.w*t);return qq*qq/(2*S.C)*1e3;},       // Ec -> mJ
+        function(t){var ii=-S.w*Q0*Math.sin(S.w*t);return .5*S.L*ii*ii*1e3;},   // Em -> mJ
+        C.pinkD,C.skyD,s.t%(S.T/2),S,S.T/2,'Ec（粉）/ Em（蓝）',S.tot*1e3,S.tot*1e3,'Ec/mJ','Em/mJ');
         set('tot',nf(S.tot*1e3)+' mJ');var f1=q('[data-bar="ec"]'),f2=q('[data-bar="em"]'),t1=q('[data-barv="ec"]'),t2=q('[data-barv="em"]');
         if(f1)f1.style.width=(S.Ec/S.tot*100).toFixed(1)+'%';if(f2)f2.style.width=(S.Em/S.tot*100).toFixed(1)+'%';if(t1)t1.textContent=nf(S.Ec*1e3)+' mJ';if(t2)t2.textContent=nf(S.Em*1e3)+' mJ';}
       var msg=q('[data-status]');if(msg)msg.textContent='T = 2π√(LC) = '+nf(S.T*1000)+' ms；电场能与磁场能每隔 T/4 完全转化一次。';
