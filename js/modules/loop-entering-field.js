@@ -193,8 +193,9 @@
       ctx.strokeRect(x1,ytop,x2-x1,ybot-ytop);ctx.restore();
       if(d.enter||d.exit){
         var c=d.enter?C.pinkD:C.skyD;
-        if(d.enter){arrow(ctx,x2-14,ytop-2,x2+16,ytop-2,c);arrow(ctx,x1+14,ybot+2,x1-16,ybot+2,c);}
-        else{arrow(ctx,x1+14,ytop-2,x1-16,ytop-2,c);arrow(ctx,x2-14,ybot+2,x2+16,ybot+2,c);}
+        // 进入：向里磁通增加 → 逆时针（上边向左、下边向右）；穿出：顺时针（上边向右、下边向左）
+        if(d.enter){arrow(ctx,x2+16,ytop-2,x2-14,ytop-2,c);arrow(ctx,x1-16,ybot+2,x1+14,ybot+2,c);}
+        else{arrow(ctx,x1-16,ytop-2,x1+14,ytop-2,c);arrow(ctx,x2+16,ybot+2,x2-14,ybot+2,c);}
         label(ctx,'I = '+nf(d.I)+' A',(x1+x2)/2,ytop-18,c,'center');
       }
       arrow(ctx,x1-70,(ytop+ybot)/2,x1-18,(ytop+ybot)/2,C.mintD);label(ctx,'v',x1-70,(ytop+ybot)/2-10,C.mintD);
