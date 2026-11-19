@@ -183,7 +183,7 @@
       if(idx!==3)return;quizData();q('[data-qt="1"]').textContent=Q[1].text;q('[data-qt="2"]').textContent=Q[2].text;q('[data-unit]').textContent=Q[2].unit;
       var box=q('[data-op="1"]');box.innerHTML='';Q[1].opts.forEach(function(t,i){var b=doc.createElement('button');b.type='button';b.textContent=String.fromCharCode(65+i)+'. '+t;b.setAttribute('data-i',i);box.appendChild(b);});
     }
-    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');}}
+    function resetQuiz(){if(idx===3){sel=-1;q('[data-num]').value='';q('[data-fb="1"]').hidden=true;q('[data-fb="2"]').hidden=true;var os=q('[data-op="1"]').querySelectorAll('button');for(var i=0;i<os.length;i++)os[i].classList.remove('is-sel');paintQuiz();}}
     function submit(n){n=Number(n);var fb=q('[data-fb="'+n+'"]');
       if(n===1){if(sel<0){fb.className='eq-fb no';fb.hidden=false;fb.textContent='请先选择一个答案。';return;}
         var ok=sel===Q[1].correct;fb.className='eq-fb '+(ok?'ok':'no');fb.hidden=false;fb.innerHTML=(ok?'✅ 正确！':'❌ 再想想。')+' '+Q[1].expl;}
