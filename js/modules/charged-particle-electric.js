@@ -94,15 +94,31 @@
     }
   }
 
+  /* 画布按实际显示宽度 1:1 渲染：逻辑像素 == CSS 像素，文字不再被缩小发虚；
+     高分屏用 dpr 倍缓冲保证锐利。容器宽度变化时自动重算。 */
   function setupCanvas(w, h) {
+    var aspect = w / h;
     var c = doc.createElement('canvas');
-    var dpr = Math.min(global.devicePixelRatio || 1, 2);
-    c.width = Math.round(w * dpr);
-    c.height = Math.round(h * dpr);
     c.className = 'cpe-canvas';
     var ctx = c.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return { el: c, ctx: ctx, w: w, h: h };
+    var view = { el: c, ctx: ctx, w: w, h: h, aspect: aspect, lastW: 0, lastDpr: 0 };
+    view.resize = function () {
+      var host = c.parentNode || c;
+      var cssW = Math.round(host.clientWidth || c.clientWidth || w);
+      if (cssW < 200) cssW = w;
+      var cssH = Math.round(cssW / aspect);
+      var dpr = Math.min(global.devicePixelRatio || 1, 2);
+      if (cssW === view.lastW && dpr === view.lastDpr) return false;
+      view.lastW = cssW; view.lastDpr = dpr;
+      c.style.width = '100%';
+      c.style.height = cssH + 'px';
+      c.width = Math.round(cssW * dpr);
+      c.height = Math.round(cssH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      view.w = cssW; view.h = cssH;
+      return true;
+    };
+    return view;
   }
 
   function nf(v) {
@@ -281,7 +297,7 @@
   }
 
   /* ---------------- 绘制 ---------------- */
-  function arrow(ctx, x1, y1, x2, y2, color, label, lw) {
+  function arrow(ctx, x1, y1, x2, y2, color, text, lw, lab) {
     var dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy);
     if (len < 3) return;
     var ux = dx / len, uy = dy / len, hs = Math.min(11, len * 0.32);
@@ -294,17 +310,20 @@
     ctx.lineTo(x2 - ux * hs - uy * hs * 0.55, y2 - uy * hs + ux * hs * 0.55);
     ctx.lineTo(x2 - ux * hs + uy * hs * 0.55, y2 - uy * hs - ux * hs * 0.55);
     ctx.closePath(); ctx.fill();
-    if (label) {
+    if (text) {
       ctx.font = '600 16px "PingFang SC","Microsoft YaHei",sans-serif';
-      ctx.fillText(label, x2 + 7, y2 - 7);
+      ctx.textAlign = lab && lab.align ? lab.align : 'left';
+      ctx.fillText(text, x2 + (lab && lab.dx != null ? lab.dx : 7),
+        y2 + (lab && lab.dy != null ? lab.dy : -7));
     }
     ctx.restore();
   }
-  function label(ctx, text, x, y, color, align) {
+  function label(ctx, text, x, y, color, align, size) {
     ctx.save();
-    ctx.font = '15px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.font = (size || 15) + 'px "PingFang SC","Microsoft YaHei",sans-serif';
     ctx.fillStyle = color || C.ink3;
     ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'alphabetic';
     ctx.fillText(text, x, y);
     ctx.restore();
   }
@@ -336,7 +355,9 @@
   function drawScene(view, d, s, prog) {
     var ctx = view.ctx, W = view.w, H = view.h;
     ctx.clearRect(0, 0, W, H);
-    var pad = 18, pw = W - pad * 2, ph = H - pad * 2;
+    // 底部留独立状态条，避免状态文字与“d / 板长”标注贴边被裁
+    var pad = 18, bottom = 32;
+    var pw = W - pad * 2, ph = H - pad - bottom;
     var scale = Math.min(pw / (XMAX - XMIN), ph / (2 * YR));
     var midX = (XMIN + XMAX) / 2, cx = pad + pw / 2, cy = pad + ph / 2;
     function PX(x) { return cx + (x - midX) * scale; }
@@ -393,7 +414,7 @@
         ctx.closePath(); ctx.fill();
       }
       ctx.restore();
-      label(ctx, 'E ↑', PX(PL / 2), PY(0.088), C.mintD, 'center');
+      label(ctx, 'E ↑', PX(PL / 2), PY(0.115), C.mintD, 'center', 14);
       // 荧光屏
       ctx.save();
       ctx.setLineDash([6, 5]); ctx.strokeStyle = C.ink3; ctx.lineWidth = 2;
@@ -443,21 +464,33 @@
 
       var vxLen = cur.vx * 0.0016 * scale;
       var vyLen = cur.vy * 0.0016 * scale;
-      arrow(ctx, px0, py0, px0 + vxLen, py0, C.skyD, 'vₓ', 2.4);
-      if (Math.abs(cur.vy) > 0.4) arrow(ctx, px0, py0, px0, py0 - vyLen, C.pinkD, 'vᵧ', 2.4);
-      arrow(ctx, px0, py0, px0 + vxLen, py0 - vyLen, C.mintD, 'v', 2.8);
+      // 箭头收在画布内，贴边时不会把标注挤出可视区
+      var vxDraw = Math.max(6, Math.min(vxLen, W - 14 - px0));
+      var vyRoom = vyLen >= 0 ? py0 - 14 : (H - bottom) - py0 - 14;
+      var vyDraw = Math.abs(vyLen) > 0.4
+        ? (vyLen >= 0 ? 1 : -1) * Math.min(Math.abs(vyLen), Math.max(6, vyRoom)) : 0;
+      // 三个速度标注分开摆放：vₓ 在右、vᵧ 在左、合速度 v 在斜箭头右上；
+      // 箭头尖靠近上边缘时标注自动翻到下方；竖直分量很小时省略 v 避免叠字。
+      function labFor(tipY, base) { return tipY < 30 ? { dx: base.dx, dy: 15, align: base.align } : base; }
+      var vxLab = labFor(py0, { dx: -6, dy: -10, align: 'right' });
+      var vyLab = labFor(py0 - vyDraw, { dx: -7, dy: -4, align: 'right' });
+      var vLab = labFor(py0 - vyDraw, { dx: 8, dy: -9, align: 'left' });
+      arrow(ctx, px0, py0, px0 + vxDraw, py0, C.skyD, 'vₓ', 2.4, vxLab);
+      if (Math.abs(vyDraw) > 0.4) arrow(ctx, px0, py0, px0, py0 - vyDraw, C.pinkD, 'vᵧ', 2.4, vyLab);
+      arrow(ctx, px0, py0, px0 + vxDraw, py0 - vyDraw, C.mintD,
+        Math.abs(vyDraw) > 18 ? 'v' : null, 2.8, vLab);
     }
 
     // 入射标注
     label(ctx, 'v₀ 水平射入', PX(XMIN) + 4, PY(0) - 12, C.ink2, 'left');
     if (d.mode !== 'accel') {
-      label(ctx, '板长 L = ' + PL.toFixed(2) + ' m', PX(PL / 2), PY(-GAP / 2) + 20, C.ink3, 'center');
-      label(ctx, 'd = ' + GAP.toFixed(2) + ' m', PX(0.02), PY(-0.116), C.ink3, 'left');
+      label(ctx, '板长 L = ' + PL.toFixed(2) + ' m', PX(PL / 2), PY(-GAP / 2) + 20, C.ink3, 'center', 13);
+      label(ctx, 'd = ' + GAP.toFixed(2) + ' m', PX(0), PY(-0.116), C.ink3, 'left', 13);
     }
     var status = d.mode === 'accel'
       ? (d.disc < 0 ? '粒子未能穿出加速区（电场力做负功）' : '直线加速：v² = v₀² + 2qEd')
       : (d.hit ? '⚠ 粒子在极板间发生碰撞，未飞出电场' : '粒子飞出电场，随后做匀速直线运动');
-    label(ctx, status, pad + 4, H - 8, d.hit || d.disc < 0 ? C.pinkD : C.ink3, 'left');
+    label(ctx, status, pad + 2, H - 9, d.hit || d.disc < 0 ? C.pinkD : C.ink3, 'left', 13);
     return cur;
   }
 
@@ -605,6 +638,14 @@
       var q1 = function (sel) { return container.querySelector(sel); };
       var qa = function (sel) { return container.querySelectorAll(sel); };
 
+      // 容器宽度变化（侧栏折叠 / 窗口缩放）时按 1:1 重算画布，保持文字清晰。
+      var views = chartView ? [view, dataView, chartView] : [view, dataView];
+      function resizeAll() { views.forEach(function (v) { v.resize(); }); }
+      resizeAll();
+      var ro = global.ResizeObserver ? new global.ResizeObserver(resizeAll) : null;
+      if (ro) views.forEach(function (v) { ro.observe(v.el.parentNode); });
+      else on(listeners, global, 'resize', resizeAll);
+
       function setOutputs() {
         var out = qa('[data-out]');
         for (var i = 0; i < out.length; i++) {
@@ -735,6 +776,7 @@
         if (dead) return;
         dead = true;
         global.cancelAnimationFrame(raf);
+        if (ro) ro.disconnect();
         for (var t in listeners) {
           if (!Object.prototype.hasOwnProperty.call(listeners, t)) continue;
           var arr = listeners[t];
